@@ -1,0 +1,81 @@
+// Top-level build file where you can add configuration options common to all sub-projects/modules.
+
+buildscript {
+    ext.kotlin_version = '1.2.21'
+    repositories {
+        google()
+        jcenter()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:3.1.0-beta4'
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
+
+        // NOTE: Do not place your application dependencies here; they belong
+        // in the individual module build.gradle files
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        jcenter()
+        maven { url "https://jitpack.io" }
+    }
+
+    ext {
+        andConf = [
+                minSdk     : 21,
+                sdk        : 27,
+                versionCode: 1,
+                versionName: "0.1.0",
+        ]
+    }
+}
+
+task clean(type: Delete) {
+    delete rootProject.buildDir
+}
+
+ext.vs = [
+        kotlin: ext.kotlin_version,
+        supportLib: '27.1.0',
+
+        okhttp: '3.9.0',
+        timber: '4.6.1',
+
+        rx: [
+                java: '2.1.9',
+                binding: '2.1.1',
+        ],
+
+        test: [
+                assertk: '0.9',
+                junit: '4.12',
+                mockitoKotlin: '1.5.0',
+        ],
+]
+
+ext.deps = [
+
+        lvl: 'com.github.bolein:better-licensing:1.5.0',
+
+        kotlin: [
+                plugin: "org.jetbrains.kotlin:kotlin-gradle-plugin:${vs.kotlin}",
+                stdlib: "org.jetbrains.kotlin:kotlin-stdlib-jre7:${vs.kotlin}"
+        ],
+
+        rx: [
+                java: "io.reactivex.rxjava2:rxjava:${vs.rx.java}",
+                binding: "com.jakewharton.rxbinding2:rxbinding-kotlin:${vs.rx.binding}",
+        ],
+
+        support: [
+                compat: "com.android.support:support-compat:${vs.supportLib}",
+        ],
+
+        test: [
+                junit: 'junit:junit:4.12',
+                assertk: "com.willowtreeapps.assertk:assertk:0.9",
+                mockito: "com.nhaarman:mockito-kotlin:1.5.0"
+        ],
+]
