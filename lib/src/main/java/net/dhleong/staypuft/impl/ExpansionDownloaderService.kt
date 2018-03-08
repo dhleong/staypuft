@@ -37,7 +37,10 @@ class ExpansionDownloaderService : JobService(), IExpansionDownloaderService {
     override fun onCreate() {
         super.onCreate()
 
-        engine = ExpansionDownloaderEngine(this)
+        engine = ExpansionDownloaderEngine(
+            this,
+            DefaultUIProxy(this)
+        )
     }
 
     override fun onStopJob(params: JobParameters): Boolean {

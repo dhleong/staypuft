@@ -1,5 +1,8 @@
 package net.dhleong.staypuft.impl
 
+import android.content.Context
+import android.content.Intent
+import android.support.v4.content.LocalBroadcastManager
 import net.dhleong.staypuft.ApkExpansionException
 import net.dhleong.staypuft.Notifier
 
@@ -29,4 +32,29 @@ internal interface UIProxy {
         const val EXTRA_DOWNLOADED = "downloaded"
         const val EXTRA_TOTAL_BYTES = "total-bytes"
     }
+}
+
+internal class DefaultUIProxy(
+    context: Context
+) : UIProxy {
+
+    private val lbm: LocalBroadcastManager = LocalBroadcastManager.getInstance(context)
+
+    override fun statusChanged(status: Int) {
+        lbm.sendBroadcast(
+            Intent(UIProxy.ACTION_STATUS_CHANGE).apply {
+                putExtra(UIProxy.EXTRA_STATUS, status)
+            }
+        )
+    }
+
+    override fun progress(downloaded: Long, total: Long) {
+        lbm.sendBroadcast(
+            Intent(UIProxy.ACTION_PROGRESS).apply {
+                putExtra(UIProxy.EXTRA_DOWNLOADED, downloaded)
+                putExtra(UIProxy.EXTRA_TOTAL_BYTES, total)
+            }
+        )
+    }
+
 }
