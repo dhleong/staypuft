@@ -2,8 +2,13 @@ package net.dhleong.staypuft.impl
 
 import android.app.Activity
 import android.app.Fragment
+import android.content.BroadcastReceiver
 import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.os.Bundle
+import android.support.v4.content.LocalBroadcastManager
+import io.reactivex.Observer
 import io.reactivex.Single
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.CompositeDisposable
@@ -11,6 +16,7 @@ import io.reactivex.schedulers.Schedulers
 import io.reactivex.subjects.BehaviorSubject
 import net.dhleong.staypuft.DownloadState
 import net.dhleong.staypuft.DownloaderConfig
+import net.dhleong.staypuft.Notifier
 import net.dhleong.staypuft.rx.getSaveDirectory
 import java.io.File
 
@@ -20,13 +26,14 @@ import java.io.File
  */
 class StaypuftFragment : Fragment() {
 
-    val statusEvents: BehaviorSubject<DownloadState> =
+    val stateEvents: BehaviorSubject<DownloadState> =
         BehaviorSubject.createDefault(DownloadState.Checking())
 
     private val subs = CompositeDisposable()
 
     private lateinit var downloadsTracker: DownloadsTracker
     private var myConfig: DownloaderConfig? = null
+    private var serviceStateReceiver: BroadcastReceiver? = null
 
     fun setConfig(config: DownloaderConfig) {
         myConfig = config
@@ -42,7 +49,7 @@ class StaypuftFragment : Fragment() {
         // stick around
         retainInstance = true
 
-        statusEvents.onNext(DownloadState.Checking())
+        stateEvents.onNext(DownloadState.Checking())
         downloadsTracker = DownloadsTracker(activity)
 
         // if we have a config, go ahead and check
@@ -52,6 +59,7 @@ class StaypuftFragment : Fragment() {
     override fun onDestroy() {
         super.onDestroy()
 
+        unregisterStateReceiver()
         subs.clear()
     }
 
@@ -62,19 +70,19 @@ class StaypuftFragment : Fragment() {
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe { status -> when (status) {
                     DownloadStatus.READY -> {
-                        statusEvents.onNext(DownloadState.Ready())
+                        stateEvents.onNext(DownloadState.Ready())
                     }
 
                     DownloadStatus.UNKNOWN -> {
-                        statusEvents.onNext(DownloadState.Checking())
+                        stateEvents.onNext(DownloadState.Checking())
                     }
 
                     else -> {
-                        statusEvents.onNext(DownloadState.Unavailable())
+                        stateEvents.onNext(DownloadState.Unavailable())
 
-                        // TODO forward messages from the Service to [statusEvents]
                         // TODO raise notification immediately?
                         activity?.let { context ->
+                            registerStateReceiver()
                             ExpansionDownloaderService.start(
                                 context,
                                 config
@@ -101,6 +109,32 @@ class StaypuftFragment : Fragment() {
         }
     }
 
+    private fun registerStateReceiver() {
+        unregisterStateReceiver()
+
+        activity?.let { context ->
+            serviceStateReceiver = ServiceStateReceiver(stateEvents).also {
+                LocalBroadcastManager.getInstance(context)
+                    .registerReceiver(
+                        it,
+                        IntentFilter().apply {
+                            addAction(UIProxy.ACTION_PROGRESS)
+                            addAction(UIProxy.ACTION_STATUS_CHANGE)
+                        }
+                    )
+            }
+        }
+    }
+
+    private fun unregisterStateReceiver() {
+        activity?.let { context ->
+            serviceStateReceiver?.let {
+                LocalBroadcastManager.getInstance(context)
+                    .unregisterReceiver(it)
+            }
+        }
+    }
+
     private class SaveDirectoryWrapper(
         private val context: Activity
     ) : IHasSaveDirectory {
@@ -111,5 +145,42 @@ class StaypuftFragment : Fragment() {
     companion object {
         const val TAG = "net.dhleong.staypuft"
     }
+}
 
+private class ServiceStateReceiver(
+    private val events: Observer<DownloadState>
+) : BroadcastReceiver() {
+
+    private var lastDownloaded: Long = 0
+    private var lastTotalBytes: Long = 1
+
+    override fun onReceive(context: Context, intent: Intent) {
+        when (intent.action) {
+            UIProxy.ACTION_STATUS_CHANGE -> {
+                notifyStatusChange(intent.getIntExtra(UIProxy.EXTRA_STATUS, 0))
+            }
+
+            UIProxy.ACTION_PROGRESS -> {
+                lastDownloaded = intent.getLongExtra(UIProxy.EXTRA_DOWNLOADED, 0L)
+                lastTotalBytes = intent.getLongExtra(UIProxy.EXTRA_TOTAL_BYTES, 1L)
+                notifyStatusChange(Notifier.STATE_DOWNLOADING)
+            }
+        }
+    }
+
+    private fun notifyStatusChange(status: Int) {
+        val state = when (status) {
+            Notifier.STATE_CONNECTING,
+            Notifier.STATE_FETCHING_URL,
+            Notifier.STATE_DOWNLOADING -> DownloadState.Downloading(lastDownloaded, lastTotalBytes)
+
+            Notifier.STATE_COMPLETED -> DownloadState.Ready()
+
+            // TODO
+
+            else -> null
+        }
+
+        if (state != null) events.onNext(state)
+    }
 }

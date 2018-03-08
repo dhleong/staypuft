@@ -1,7 +1,7 @@
 // Top-level build file where you can add configuration options common to all sub-projects/modules.
 
 buildscript {
-    ext.kotlin_version = '1.2.21'
+    ext.kotlin_version = '1.2.30'
     repositories {
         google()
         jcenter()
@@ -71,6 +71,7 @@ ext.deps = [
 
         support: [
                 compat: "com.android.support:support-compat:${vs.supportLib}",
+                localbroadcast: "com.android.support:support-core-utils:${vs.supportLib}",
         ],
 
         test: [

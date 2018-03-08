@@ -2,6 +2,7 @@ package net.dhleong.staypuft
 
 import android.app.Activity
 import android.support.annotation.StringRes
+import io.reactivex.Observable
 import net.dhleong.staypuft.impl.StaypuftFragment
 
 
@@ -16,6 +17,9 @@ class Staypuft private constructor(
     fun setConfig(config: DownloaderConfig) {
         fragment.setConfig(config)
     }
+
+    val stateEvents: Observable<DownloadState>
+        get() = fragment.stateEvents
 
     companion object {
         fun getInstance(activity: Activity): Staypuft {
@@ -52,7 +56,7 @@ class Staypuft private constructor(
             Notifier.STATE_FAILED_FETCHING_URL -> R.string.state_failed_fetching_url
             Notifier.STATE_FAILED_SDCARD_FULL -> R.string.state_failed_sdcard_full
             Notifier.STATE_FAILED_CANCELED -> R.string.state_failed_cancelled
-            
+
             else -> R.string.state_unknown
         }
 

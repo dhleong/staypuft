@@ -23,10 +23,10 @@ val apkx = Staypuft.getInstance(activity).apply {
 That's it! If you want to get status updates, just subscribe to them:
 
 ```kotlin
-apkx.statusEvents
+apkx.stateEvents
     .subscribe { event ->
         when (event) {
-            is DownloadStatus.Ready -> {
+            is DownloadState.Ready -> {
                 // done!
             }
         }

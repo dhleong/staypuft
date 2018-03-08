@@ -1,4 +1,21 @@
-<manifest package="net.dhleong.staypuft"
-    xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="net.dhleong.staypuft">
+
+    <!-- Required to access Google Play Licensing -->
+    <uses-permission android:name="com.android.vending.CHECK_LICENSE" />
+
+    <!-- Required to download files from Google Play -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- Required to read and write the expansion files on shared storage -->
+    <uses-permission
+        android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
+    <uses-permission
+        android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+
+    <application>
+        <service android:name=".impl.ExpansionDownloaderService"
+            android:permission="android.permission.BIND_JOB_SERVICE" />
+    </application>
 
 </manifest>

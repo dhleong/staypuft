@@ -25,6 +25,7 @@ dependencies {
     implementation deps.kotlin.stdlib
 
     implementation deps.support.compat
+    implementation deps.support.localbroadcast
     api deps.lvl
     api deps.rx.java
     api deps.rx.binding

@@ -26,6 +26,7 @@ import java.util.concurrent.atomic.AtomicBoolean
  */
 internal class ExpansionDownloaderEngine(
     private val service: IExpansionDownloaderService,
+    private val uiProxy: UIProxy,
     private val tracker: DownloadsTracker = DownloadsTracker(service.getApplicationContext()),
     private val bufferSize: Int = 4096
 ) {
@@ -76,15 +77,21 @@ internal class ExpansionDownloaderEngine(
             .subscribe({
                 // completed successfully
                 notifier.done()
+                uiProxy.done()
                 onResult(false)
 
             }, { e ->
                 // failed, or paused
                 when (e) {
-                    is ApkExpansionException -> notifier.error(e)
+                    is ApkExpansionException -> {
+                        notifier.error(e)
+                        uiProxy.error(e)
+                    }
                     is IOException -> {
                         Log.e(TAG, "IOE downloading APK expansion", e)
-                        notifier.error(ApkExpansionException(Notifier.STATE_PAUSED_NETWORK_UNAVAILABLE))
+                        val err = ApkExpansionException(Notifier.STATE_PAUSED_NETWORK_UNAVAILABLE)
+                        notifier.error(err)
+                        uiProxy.error(err)
                     }
                     else -> {
                         // TODO ?
@@ -140,6 +147,7 @@ internal class ExpansionDownloaderEngine(
         throwIfNotRunning()
 
         notifier.statusChanged(Notifier.STATE_CONNECTING)
+        uiProxy.statusChanged(Notifier.STATE_CONNECTING)
         val response = try {
             conn.responseCode
         } catch (e: IOException) {
@@ -150,6 +158,7 @@ internal class ExpansionDownloaderEngine(
 
         processResponseHeaders(file, conn)
         notifier.statusChanged(Notifier.STATE_DOWNLOADING)
+        uiProxy.statusChanged(Notifier.STATE_DOWNLOADING)
         downloadResponseTo(file, conn, dest, notifier)
     }
 
@@ -270,6 +279,7 @@ internal class ExpansionDownloaderEngine(
 
                         tracker.save(file)
                         notifier.progress(file.downloaded, file.size)
+                        uiProxy.progress(file.downloaded, file.size)
                     }
                 }
             }
