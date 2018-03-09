@@ -94,8 +94,8 @@ open class DefaultNotifier(
         )
 
     class Factory : Notifier.Factory {
-        override fun create(context: Context, args: PersistableBundle) =
-            DefaultNotifier(context, args.getString("channelId"))
+        override fun create(context: Context, args: PersistableBundle?) =
+            DefaultNotifier(context, args!!.getString("channelId"))
     }
 
     companion object {

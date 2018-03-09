@@ -24,8 +24,8 @@ interface Notifier {
     interface Factory {
 
         class Config(
-            val klass: Class<Factory>,
-            val arg: PersistableBundle
+            val klass: Class<out Factory>,
+            val arg: PersistableBundle?
         ) {
 
             fun inflate(context: Context): Notifier = klass.newInstance().create(context, arg)
@@ -42,7 +42,7 @@ interface Notifier {
             }
         }
 
-        fun create(context: Context, args: PersistableBundle): Notifier
+        fun create(context: Context, args: PersistableBundle?): Notifier
     }
 
     companion object {

@@ -9,7 +9,7 @@ import kotlin.coroutines.experimental.buildSequence
 /**
  * @author dhleong
  */
-internal class DownloadsTracker(
+internal open class DownloadsTracker(
     private val prefs: SharedPreferences,
     private val apkVersionCode: Int
 ) {

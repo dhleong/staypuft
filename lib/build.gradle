@@ -31,6 +31,8 @@ dependencies {
     api deps.rx.binding
 
     testImplementation deps.test.junit
+    testImplementation deps.test.assertk
+    testImplementation deps.test.mockito
     androidTestImplementation 'com.android.support.test:runner:1.0.1'
     androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.1'
 }

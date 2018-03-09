@@ -7,7 +7,6 @@ import com.google.android.vending.licensing.Policy
 import io.reactivex.Completable
 import io.reactivex.Observable
 import io.reactivex.Single
-import io.reactivex.disposables.Disposable
 import io.reactivex.schedulers.Schedulers
 import net.dhleong.staypuft.ApkExpansionException
 import net.dhleong.staypuft.DownloaderConfig
@@ -17,7 +16,6 @@ import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import java.net.HttpURLConnection
-import java.net.URL
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicBoolean
 
@@ -37,11 +35,13 @@ internal class ExpansionDownloaderEngine(
 
     private val running = AtomicBoolean(true)
 
+    /**
+     * Completes if successful, else errors if it should be retried
+     */
     fun processDownload(
         config: DownloaderConfig,
-        notifier: Notifier,
-        onResult: (needsReschedule: Boolean) -> Unit
-    ): Disposable {
+        notifier: Notifier
+    ): Completable {
 
         val policy = service.createPolicy(config)
         return service.checkLicenseAccess(config, policy)
@@ -74,13 +74,12 @@ internal class ExpansionDownloaderEngine(
                         downloadFile(it, notifier)
                     }
             }
-            .subscribe({
+            .doOnComplete {
                 // completed successfully
                 notifier.done()
                 uiProxy.done()
-                onResult(false)
-
-            }, { e ->
+            }
+            .doOnError { e ->
                 // failed, or paused
                 when (e) {
                     is ApkExpansionException -> {
@@ -98,9 +97,7 @@ internal class ExpansionDownloaderEngine(
                         Log.e(TAG, "Unexpected error downloading APK expansion", e)
                     }
                 }
-
-                onResult(true)
-            })
+            }
     }
 
     private fun updateLVLCache(
@@ -142,7 +139,7 @@ internal class ExpansionDownloaderEngine(
     private fun downloadFile(file: ExpansionFile, notifier: Notifier): Completable = Completable.fromAction {
         val dest = prepareDestFile(file)
 
-        val conn = URL(file.url).openConnection() as HttpURLConnection
+        val conn = service.openUrl(file.url)
         prepareConnection(file, conn)
         throwIfNotRunning()
 

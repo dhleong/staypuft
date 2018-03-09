@@ -9,6 +9,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.os.Build
 import android.provider.Settings
+import android.util.Log
 import com.google.android.vending.licensing.AESObfuscator
 import com.google.android.vending.licensing.APKExpansionPolicy
 import com.google.android.vending.licensing.LicenseChecker
@@ -18,10 +19,6 @@ import net.dhleong.staypuft.DownloaderConfig
 import net.dhleong.staypuft.Notifier
 import net.dhleong.staypuft.rx.LicenceCheckerResult
 import net.dhleong.staypuft.rx.checkAccess
-import net.dhleong.staypuft.rx.getAvailableBytes
-import net.dhleong.staypuft.rx.getFilesystemRoot
-import net.dhleong.staypuft.rx.getSaveDirectory
-import java.io.File
 
 /**
  * @author dhleong
@@ -57,11 +54,19 @@ class ExpansionDownloaderService : JobService(), IExpansionDownloaderService {
         }
 
         engine.start()
-        engine.processDownload(config!!, notifier!!) { needsReschedule ->
-            jobFinished(params, needsReschedule)
-        }
+        subs.add(
+            engine.processDownload(config!!, notifier!!)
+                .toSingleDefault(false)
+                .onErrorReturn { e ->
+                    Log.v("staypuft", "Error processing download", e)
+                    true
+                }
+                .subscribe { needsReschedule ->
+                    jobFinished(params, needsReschedule)
+                }
+        )
 
-        return true
+        return true // going async
     }
 
     override fun checkLicenseAccess(
@@ -85,13 +90,6 @@ class ExpansionDownloaderService : JobService(), IExpansionDownloaderService {
             deviceId
         ))
     }
-
-    override fun getSaveDirectory(): File {
-        return (this as Context).getSaveDirectory()
-    }
-
-    override fun getAvailableBytes(path: File): Long =
-        path.getFilesystemRoot().getAvailableBytes()
 
     companion object {
         fun start(context: Context, config: DownloaderConfig) {
