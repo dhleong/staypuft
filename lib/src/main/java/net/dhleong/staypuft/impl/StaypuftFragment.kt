@@ -31,7 +31,7 @@ class StaypuftFragment : Fragment() {
 
     private val subs = CompositeDisposable()
 
-    private lateinit var downloadsTracker: DownloadsTracker
+    private lateinit var downloadsTracker: IDownloadsTracker
     private var myConfig: DownloaderConfig? = null
     private var serviceStateReceiver: BroadcastReceiver? = null
 
@@ -50,7 +50,7 @@ class StaypuftFragment : Fragment() {
         retainInstance = true
 
         stateEvents.onNext(DownloadState.Checking())
-        downloadsTracker = DownloadsTracker(activity)
+        downloadsTracker = PrefsDownloadsTracker(activity)
 
         // if we have a config, go ahead and check
         myConfig?.let(::performDownloadStatusCheck)

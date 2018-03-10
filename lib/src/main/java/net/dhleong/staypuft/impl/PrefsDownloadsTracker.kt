@@ -9,26 +9,26 @@ import kotlin.coroutines.experimental.buildSequence
 /**
  * @author dhleong
  */
-internal open class DownloadsTracker(
+internal open class PrefsDownloadsTracker(
     private val prefs: SharedPreferences,
     private val apkVersionCode: Int
-) {
+) : IDownloadsTracker {
 
     constructor(context: Context) : this(
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE),
         context.getPackageInfo().versionCode
     )
 
-    fun needsUpdate(): Boolean =
+    override fun needsUpdate(): Boolean =
         prefs.getInt(APK_VERSION, 0) < apkVersionCode
 
-    fun markUpdated(context: Context) {
+    override fun markUpdated(service: IExpansionDownloaderService) {
         prefs.edit()
-            .putInt(APK_VERSION, context.getPackageInfo().versionCode)
+            .putInt(APK_VERSION, service.getApkVersionCode())
             .apply()
     }
 
-    fun getKnownDownload(index: Int): ExpansionFile? {
+    override fun getKnownDownload(index: Int): ExpansionFile? {
         return if (index == 0) {
             val mainName = prefs.getString(MAIN_NAME, null)
             mainName?.let {
@@ -56,12 +56,12 @@ internal open class DownloadsTracker(
         }
     }
 
-    fun getKnownDownloads(): Sequence<ExpansionFile> = buildSequence {
+    override fun getKnownDownloads(): Sequence<ExpansionFile> = buildSequence {
         getKnownDownload(0)?.let { yield(it) } ?: return@buildSequence
         getKnownDownload(1)?.let { yield(it) }
     }
 
-    fun save(expansionFile: ExpansionFile) {
+    override fun save(expansionFile: ExpansionFile) {
         prefs.edit().apply {
 
             if (expansionFile.isMain) {
@@ -81,7 +81,7 @@ internal open class DownloadsTracker(
         }.apply()
     }
 
-    fun deleteFile(index: Int) {
+    override fun deleteFile(index: Int) {
         prefs.edit().apply {
             remove(
                 if (index == 0) MAIN_NAME
@@ -150,6 +150,6 @@ data class ExpansionFile(
     )
 
     companion object {
-        const val TMP_EXT = ".tmp"
+        private const val TMP_EXT = "tmp"
     }
 }

@@ -6,6 +6,7 @@ import com.google.android.vending.licensing.APKExpansionPolicy
 import com.google.android.vending.licensing.Policy
 import io.reactivex.Completable
 import io.reactivex.Observable
+import io.reactivex.Scheduler
 import io.reactivex.Single
 import io.reactivex.schedulers.Schedulers
 import net.dhleong.staypuft.ApkExpansionException
@@ -25,7 +26,7 @@ import java.util.concurrent.atomic.AtomicBoolean
 internal class ExpansionDownloaderEngine(
     private val service: IExpansionDownloaderService,
     private val uiProxy: UIProxy,
-    private val tracker: DownloadsTracker = DownloadsTracker(service.getApplicationContext()),
+    private val tracker: IDownloadsTracker = PrefsDownloadsTracker(service.getApplicationContext()),
     private val bufferSize: Int = 4096
 ) {
 
@@ -40,12 +41,13 @@ internal class ExpansionDownloaderEngine(
      */
     fun processDownload(
         config: DownloaderConfig,
-        notifier: Notifier
-    ): Completable {
+        notifier: Notifier,
+        scheduler: Scheduler = Schedulers.io()
+    ): Completable = Completable.defer {
 
         val policy = service.createPolicy(config)
-        return service.checkLicenseAccess(config, policy)
-            .subscribeOn(Schedulers.io())
+        service.checkLicenseAccess(config, policy)
+            .subscribeOn(scheduler)
             .map {
                 throwIfNotRunning()
                 it
@@ -131,7 +133,7 @@ internal class ExpansionDownloaderEngine(
 
         files.forEach(tracker::save)
 
-        tracker.markUpdated(service.getApplicationContext())
+        tracker.markUpdated(service)
 
         files
     }
@@ -156,7 +158,13 @@ internal class ExpansionDownloaderEngine(
         processResponseHeaders(file, conn)
         notifier.statusChanged(Notifier.STATE_DOWNLOADING)
         uiProxy.statusChanged(Notifier.STATE_DOWNLOADING)
-        downloadResponseTo(file, conn, dest, notifier)
+        try {
+            downloadResponseTo(file, conn, dest, notifier)
+        } finally {
+            conn.disconnect()
+        }
+
+        finalizeDownload(file, dest)
     }
 
     private fun prepareDestFile(file: ExpansionFile): File {
@@ -280,6 +288,19 @@ internal class ExpansionDownloaderEngine(
                     }
                 }
             }
+        }
+    }
+
+    private fun finalizeDownload(file: ExpansionFile, tempLocation: File) {
+        if (file.downloaded != file.size) {
+            throw ApkExpansionException(Notifier.STATE_PAUSED_NETWORK_SETUP_FAILURE,
+                "file delivered with ${file.downloaded} bytes but expected ${file.size}")
+        }
+
+        val finalDestination = file.localFile(service)
+        if (!tempLocation.renameTo(finalDestination)) {
+            throw ApkExpansionException(Notifier.STATE_PAUSED_SDCARD_UNAVAILABLE,
+                "Unable to finalize $tempLocation to $finalDestination")
         }
     }
 

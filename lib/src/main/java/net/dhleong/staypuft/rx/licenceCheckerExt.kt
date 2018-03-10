@@ -5,7 +5,7 @@ import com.google.android.vending.licensing.LicenseCheckerCallback
 import io.reactivex.Single
 
 sealed class LicenceCheckerResult {
-    class Allowed(reason: Int) : LicenceCheckerResult()
+    class Allowed(val reason: Int) : LicenceCheckerResult()
 
     class NotAllowed(
         val reason: Int

@@ -7,6 +7,7 @@ import net.dhleong.staypuft.DownloaderConfig
 import net.dhleong.staypuft.rx.LicenceCheckerResult
 import net.dhleong.staypuft.rx.getAvailableBytes
 import net.dhleong.staypuft.rx.getFilesystemRoot
+import net.dhleong.staypuft.rx.getPackageInfo
 import net.dhleong.staypuft.rx.getSaveDirectory
 import java.io.File
 import java.net.HttpURLConnection
@@ -42,4 +43,7 @@ interface IExpansionDownloaderService : IHasSaveDirectory {
 
     override fun getSaveDirectory(): File =
         getApplicationContext().getSaveDirectory()
+
+    fun getApkVersionCode(): Int =
+        getApplicationContext().getPackageInfo().versionCode
 }
