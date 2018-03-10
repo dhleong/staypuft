@@ -5,6 +5,7 @@ import assertk.assertions.hasText
 import com.google.android.vending.licensing.APKExpansionPolicy
 import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.anyOrNull
+import com.nhaarman.mockito_kotlin.doAnswer
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.eq
 import com.nhaarman.mockito_kotlin.mock
@@ -19,7 +20,6 @@ import net.dhleong.staypuft.Notifier
 import net.dhleong.staypuft.doesNotExist
 import net.dhleong.staypuft.rx.LicenceCheckerResult
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Test
 import java.io.File
 import java.net.HttpURLConnection
@@ -91,9 +91,29 @@ class ExpansionDownloaderEngineTest {
         assert(file.localFile(service)).hasText("main-content")
     }
 
-    @Ignore("TODO")
     @Test fun `Resume partial download`() {
+        val (file, connection) = prepareEnvironment {
+            withKnownMain(
+                existingContent = "main-",
+                sizeFromContent = "main-content"
+            )
 
+            withMainFile(
+                content = "main-content",
+                statusCode = 206
+            )
+        }
+
+        processDownload {
+            licenseAccessResults.onNext(LicenceCheckerResult.Allowed(0))
+        }
+
+        verify(connection).setRequestProperty(eq("Range"), any())
+        verify(tracker).save(eq(file))
+        verify(notifier).done()
+
+        assert(file.localTmpFile(service)).doesNotExist()
+        assert(file.localFile(service)).hasText("main-content")
     }
 
     private inline fun processDownload(
@@ -127,6 +147,60 @@ class ExpansionDownloaderEngineTest {
     private inner class EnvConfig {
 
         val connections = arrayOfNulls<HttpURLConnection>(2)
+        private val knownFiles = arrayOfNulls<ExpansionFile>(2)
+
+        init {
+            tracker.stub {
+                on { getKnownDownloads() } doReturn knownFiles.filterNotNull().asSequence()
+            }
+        }
+
+        fun withKnownMain(
+            existingContent: String,
+            size: Long = -1,
+            sizeFromContent: String? = null,
+            doCreateFile: Boolean = true
+        ) = withKnownDownload(
+            0, "main", existingContent,
+            size = size,
+            sizeFromContent = sizeFromContent,
+            doCreateFile = doCreateFile
+        )
+
+        private fun withKnownDownload(
+            index: Int,
+            name: String,
+            existingContent: String,
+            size: Long,
+            sizeFromContent: String?,
+            doCreateFile: Boolean
+        ): ExpansionFile {
+
+            val actualSize = when {
+                size != -1L -> size
+                sizeFromContent != null -> sizeFromContent.length.toLong()
+                else -> throw IllegalArgumentException("No way to size full file")
+            }
+
+            val download = ExpansionFile(
+                isMain = index == 0,
+                name = name,
+                size = actualSize,
+                url = "https://google/file/$name",
+                downloaded = existingContent.length.toLong(),
+                etag = name
+            )
+            tracker.stub {
+                on { getKnownDownload(eq(index)) } doReturn download
+            }
+
+            if (doCreateFile) {
+                download.localTmpFile(service)
+                    .writeText(existingContent)
+            }
+
+            return download
+        }
 
         fun withMainFile(
             content: String,
@@ -180,12 +254,27 @@ private fun mockConnection(
     content: String,
     etag: String = "etag",
     statusCode: Int = 200
-): HttpURLConnection =
-    mock {
+): HttpURLConnection {
+    var skipBytes = 0
+    return mock {
+        on { setRequestProperty(eq("Range"), any()) } doAnswer { invocationOnMock ->
+            val headerValue: String = invocationOnMock.getArgument(1)
+            val matches = Regex("bytes=(\\d+)-").find(headerValue)
+            if (matches != null) {
+                skipBytes = matches.groups[1]!!.value.toInt()
+            }
+
+            Unit
+        }
+
         on { responseCode } doReturn statusCode
-        on { inputStream } doReturn content.byteInputStream()
         on { contentLength } doReturn content.length
         on { contentLengthLong } doReturn content.length.toLong()
         on { getHeaderField(eq("ETag")) } doReturn etag
+
+        on { inputStream } doAnswer {
+            content.substring(skipBytes).byteInputStream()
+        }
     }
 
+}

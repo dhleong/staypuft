@@ -251,7 +251,7 @@ internal class ExpansionDownloaderEngine(
         var bytesNotified = 0L
         var timeNotified = 0L
 
-        FileOutputStream(dest).use { out ->
+        FileOutputStream(dest, /* append = */true).use { out ->
             conn.inputStream.use { input ->
                 val buffer = ByteArray(bufferSize)
                 while (true) {
