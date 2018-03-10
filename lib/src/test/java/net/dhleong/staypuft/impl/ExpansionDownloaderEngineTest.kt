@@ -1,9 +1,7 @@
 package net.dhleong.staypuft.impl
 
 import assertk.assert
-import assertk.assertions.exists
 import assertk.assertions.hasText
-import assertk.assertions.isFile
 import com.google.android.vending.licensing.APKExpansionPolicy
 import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.anyOrNull
@@ -76,20 +74,8 @@ class ExpansionDownloaderEngineTest {
     }
 
     @Test fun `Download from scratch`() {
-        val fileName = "from-scratch"
-        policy.stub {
-            on { expansionURLCount } doReturn 1
-            on { getExpansionFileName(0) } doReturn fileName
-            on { getExpansionFileSize(0) } doReturn "main-content".length.toLong()
-            on { getExpansionURL(0) } doReturn "https://google/file"
-        }
-
-        val connection = mockConnection(
-            content = "main-content"
-        )
-
-        service.stub {
-            on { openUrl(eq(policy.getExpansionURL(0))) } doReturn connection
+        val (file, connection) = prepareEnvironment {
+            withMainFile(content = "main-content")
         }
 
         processDownload {
@@ -98,27 +84,11 @@ class ExpansionDownloaderEngineTest {
 
         verify(connection, never()).setRequestProperty(eq("Range"), any())
         verify(connection).disconnect()
-        verify(tracker).save(eq(
-            ExpansionFile(
-                isMain = true,
-                name = fileName,
-                url = policy.getExpansionURL(0),
-                size = policy.getExpansionFileSize(0),
-                downloaded = policy.getExpansionFileSize(0),
-                etag = "etag"
-            )
-        ))
+        verify(tracker).save(eq(file))
         verify(notifier).done()
 
-        assert(File(testDownloadsDir, "$fileName.tmp")) {
-            doesNotExist()
-        }
-
-        assert(File(testDownloadsDir, fileName)) {
-            exists()
-            isFile()
-            hasText("main-content")
-        }
+        assert(file.localTmpFile(service)).doesNotExist()
+        assert(file.localFile(service)).hasText("main-content")
     }
 
     @Ignore("TODO")
@@ -150,6 +120,60 @@ class ExpansionDownloaderEngineTest {
                 null
             )
         )
+
+    private inline fun <T> prepareEnvironment(block: EnvConfig.() -> T) =
+        block(EnvConfig())
+
+    private inner class EnvConfig {
+
+        val connections = arrayOfNulls<HttpURLConnection>(2)
+
+        fun withMainFile(
+            content: String,
+            statusCode: Int = 200
+        ) = withFile(0, "main", statusCode, content)
+
+        fun withPatchFile(
+            content: String,
+            statusCode: Int = 200
+        ) = withFile(1, "patch", statusCode, content)
+
+        private fun withFile(
+            index: Int,
+            name: String,
+            statusCode: Int,
+            content: String
+        ): Pair<ExpansionFile, HttpURLConnection> {
+
+            val url = "https://google/file/$name"
+            val existingURLCount = policy.expansionURLCount
+            policy.stub {
+                on { expansionURLCount } doReturn maxOf(existingURLCount, index + 1)
+                on { getExpansionFileName(index) } doReturn name
+                on { getExpansionFileSize(index) } doReturn content.length.toLong()
+                on { getExpansionURL(index) } doReturn url
+            }
+
+            connections[index] = mockConnection(
+                content = content,
+                statusCode = statusCode,
+                etag = name
+            )
+
+            service.stub {
+                on { openUrl(url) } doReturn connections[index]!!
+            }
+
+            return ExpansionFile(
+                isMain = index == 0,
+                name = name,
+                url = url,
+                size = content.length.toLong(),
+                downloaded = content.length.toLong(),
+                etag = name
+            ) to connections[index]!!
+        }
+    }
 }
 
 private fun mockConnection(
