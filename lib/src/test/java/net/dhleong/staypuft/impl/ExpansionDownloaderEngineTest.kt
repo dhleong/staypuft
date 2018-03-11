@@ -12,8 +12,10 @@ import com.nhaarman.mockito_kotlin.mock
 import com.nhaarman.mockito_kotlin.never
 import com.nhaarman.mockito_kotlin.stub
 import com.nhaarman.mockito_kotlin.verify
+import io.reactivex.observers.TestObserver
 import io.reactivex.schedulers.Schedulers
 import io.reactivex.subjects.BehaviorSubject
+import net.dhleong.staypuft.ApkExpansionException
 import net.dhleong.staypuft.DefaultNotifier
 import net.dhleong.staypuft.DownloaderConfig
 import net.dhleong.staypuft.Notifier
@@ -29,7 +31,6 @@ import java.net.HttpURLConnection
  */
 class ExpansionDownloaderEngineTest {
 
-//    private val scheduler = TestScheduler()
     private val scheduler = Schedulers.from { it.run() }
 
     private val testDownloadsDir = File(".test-obbs")
@@ -39,7 +40,6 @@ class ExpansionDownloaderEngineTest {
     private lateinit var tracker: IDownloadsTracker
     private lateinit var policy: APKExpansionPolicy
     private lateinit var engine: ExpansionDownloaderEngine
-
     private lateinit var notifier: Notifier
 
     private lateinit var licenseAccessResults: BehaviorSubject<LicenceCheckerResult>
@@ -78,9 +78,9 @@ class ExpansionDownloaderEngineTest {
             withMainFile(content = "main-content")
         }
 
-        processDownload {
-            licenseAccessResults.onNext(LicenceCheckerResult.Allowed(0))
-        }
+        processDownload(
+            licenceCheckerResult = LicenceCheckerResult.Allowed(0)
+        )
 
         verify(connection, never()).setRequestProperty(eq("Range"), any())
         verify(connection).disconnect()
@@ -104,9 +104,9 @@ class ExpansionDownloaderEngineTest {
             )
         }
 
-        processDownload {
-            licenseAccessResults.onNext(LicenceCheckerResult.Allowed(0))
-        }
+        processDownload(
+            licenceCheckerResult = LicenceCheckerResult.Allowed(0)
+        )
 
         verify(connection).setRequestProperty(eq("Range"), any())
         verify(tracker).save(eq(file))
@@ -116,19 +116,39 @@ class ExpansionDownloaderEngineTest {
         assert(file.localFile(service)).hasText("main-content")
     }
 
+    @Test fun `Handle captured portal`() {
+        prepareEnvironment {
+            withMainFile(
+                content = "bogus-content",
+                reportedSize = 42
+            )
+        }
+
+        processDownload(
+            licenceCheckerResult = LicenceCheckerResult.Allowed(0)
+        ) {
+            assertError {
+                (it as ApkExpansionException).state == Notifier.STATE_PAUSED_NETWORK_SETUP_FAILURE
+                    && it.message!!.contains("Incorrect file size")
+            }
+        }
+    }
+
     private inline fun processDownload(
         config: DownloaderConfig = newConfig(),
-        events: () -> Unit
+        licenceCheckerResult: LicenceCheckerResult,
+        asserts: TestObserver<Boolean>.() -> Unit = {
+            assertNoErrors()
+            assertNoTimeout()
+            assertValue { it }
+        }
     ) {
         val process = engine.processDownload(config, notifier, scheduler = scheduler)
             .toSingleDefault(true)
 
-        events()
+        licenseAccessResults.onNext(licenceCheckerResult)
 
-        process.test()
-            .assertNoErrors()
-            .assertNoTimeout()
-            .assertValue { it }
+        process.test().asserts()
     }
 
     private fun newConfig(): DownloaderConfig =
@@ -204,18 +224,21 @@ class ExpansionDownloaderEngineTest {
 
         fun withMainFile(
             content: String,
+            reportedSize: Long? = null,
             statusCode: Int = 200
-        ) = withFile(0, "main", statusCode, content)
+        ) = withFile(0, "main", statusCode, reportedSize, content)
 
         fun withPatchFile(
             content: String,
+            reportedSize: Long? = null,
             statusCode: Int = 200
-        ) = withFile(1, "patch", statusCode, content)
+        ) = withFile(1, "patch", statusCode, reportedSize, content)
 
         private fun withFile(
             index: Int,
             name: String,
             statusCode: Int,
+            reportedSize: Long?,
             content: String
         ): Pair<ExpansionFile, HttpURLConnection> {
 
@@ -224,7 +247,9 @@ class ExpansionDownloaderEngineTest {
             policy.stub {
                 on { expansionURLCount } doReturn maxOf(existingURLCount, index + 1)
                 on { getExpansionFileName(index) } doReturn name
-                on { getExpansionFileSize(index) } doReturn content.length.toLong()
+                on { getExpansionFileSize(index) } doReturn(
+                    reportedSize ?: content.length.toLong()
+                )
                 on { getExpansionURL(index) } doReturn url
             }
 
