@@ -74,7 +74,7 @@ class ExpansionDownloaderEngineTest {
     }
 
     @Test fun `Download from scratch`() {
-        val (file, connection) = prepareEnvironment {
+        val env = prepareEnvironment {
             withMainFile(content = "main-content")
         }
 
@@ -82,6 +82,7 @@ class ExpansionDownloaderEngineTest {
             licenceCheckerResult = LicenceCheckerResult.Allowed(0)
         )
 
+        val (file, connection) = env.main
         verify(connection, never()).setRequestProperty(eq("Range"), any())
         verify(connection).disconnect()
         verify(tracker).save(eq(file))
@@ -91,8 +92,42 @@ class ExpansionDownloaderEngineTest {
         assert(file.localFile(service)).hasText("main-content")
     }
 
+    @Test fun `Download JUST the new patch, from scratch`() {
+        val env = prepareEnvironment {
+            withKnownMain(
+                existingContent = "main-content",
+                sizeFromContent = "main-content",
+                doCreateFile = false // we want to verify that we didn't download
+            )
+            withMainFile(content = "main-content")
+
+            withPatchFile(content = "patch-content")
+        }
+
+        processDownload(
+            licenceCheckerResult = LicenceCheckerResult.Allowed(0)
+        )
+
+        val mainFile = env.main.first
+        verify(service, never()).openUrl(eq(mainFile.url))
+
+        val (patchFile, connection) = env.patch
+        verify(connection, never()).setRequestProperty(eq("Range"), any())
+        verify(connection).disconnect()
+        verify(tracker).save(eq(patchFile))
+        verify(notifier).done()
+
+        // we should not have downloaded the main file...
+        assert(mainFile.localTmpFile(service)).doesNotExist()
+        assert(mainFile.localFile(service)).doesNotExist()
+
+        // ... but we should have downloaded the new patch!
+        assert(patchFile.localTmpFile(service)).doesNotExist()
+        assert(patchFile.localFile(service)).hasText("patch-content")
+    }
+
     @Test fun `Resume partial download`() {
-        val (file, connection) = prepareEnvironment {
+        val env = prepareEnvironment {
             withKnownMain(
                 existingContent = "main-",
                 sizeFromContent = "main-content"
@@ -108,6 +143,7 @@ class ExpansionDownloaderEngineTest {
             licenceCheckerResult = LicenceCheckerResult.Allowed(0)
         )
 
+        val (file, connection) = env.main
         verify(connection).setRequestProperty(eq("Range"), any())
         verify(tracker).save(eq(file))
         verify(notifier).done()
@@ -161,12 +197,19 @@ class ExpansionDownloaderEngineTest {
             )
         )
 
-    private inline fun <T> prepareEnvironment(block: EnvConfig.() -> T) =
-        block(EnvConfig())
+    private inline fun prepareEnvironment(block: EnvConfig.() -> Unit) =
+        EnvConfig().also { block(it) }
 
     private inner class EnvConfig {
 
-        val connections = arrayOfNulls<HttpURLConnection>(2)
+        val main: Pair<ExpansionFile, HttpURLConnection>
+            get() = licenseFiles[0]!! to connections[0]!!
+
+        val patch: Pair<ExpansionFile, HttpURLConnection>
+            get() = licenseFiles[1]!! to connections[1]!!
+
+        private val connections = arrayOfNulls<HttpURLConnection>(2)
+        private val licenseFiles = arrayOfNulls<ExpansionFile>(2)
         private val knownFiles = arrayOfNulls<ExpansionFile>(2)
 
         init {
@@ -213,6 +256,7 @@ class ExpansionDownloaderEngineTest {
             tracker.stub {
                 on { getKnownDownload(eq(index)) } doReturn download
             }
+            knownFiles[index] = download
 
             if (doCreateFile) {
                 download.localTmpFile(service)
@@ -240,7 +284,7 @@ class ExpansionDownloaderEngineTest {
             statusCode: Int,
             reportedSize: Long?,
             content: String
-        ): Pair<ExpansionFile, HttpURLConnection> {
+        ) {
 
             val url = "https://google/file/$name"
             val existingURLCount = policy.expansionURLCount
@@ -263,14 +307,14 @@ class ExpansionDownloaderEngineTest {
                 on { openUrl(url) } doReturn connections[index]!!
             }
 
-            return ExpansionFile(
+            licenseFiles[index] = ExpansionFile(
                 isMain = index == 0,
                 name = name,
                 url = url,
                 size = content.length.toLong(),
                 downloaded = content.length.toLong(),
                 etag = name
-            ) to connections[index]!!
+            )
         }
     }
 }

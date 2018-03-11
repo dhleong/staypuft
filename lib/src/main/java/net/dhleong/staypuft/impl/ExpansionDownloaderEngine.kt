@@ -66,7 +66,8 @@ internal class ExpansionDownloaderEngine(
                         else -> Notifier.STATE_FAILED
                     }))
 
-                is LicenceCheckerResult.Allowed -> updateLVLCache(policy)
+                is LicenceCheckerResult.Allowed ->
+                    updateLVLCacheAndGetFilesToDownload(policy)
             } }
             .flatMapCompletable { files ->
                 throwIfNotRunning()
@@ -102,7 +103,11 @@ internal class ExpansionDownloaderEngine(
             }
     }
 
-    private fun updateLVLCache(
+    /**
+     * This obnoxiously named function updates the LVL cache as necessary,
+     *  and returns each [ExpansionFile] that is not already up to date.
+     */
+    private fun updateLVLCacheAndGetFilesToDownload(
         policy: APKExpansionPolicy
     ): Single<List<ExpansionFile>> = Single.fromCallable {
         val urls = policy.expansionURLCount
@@ -116,12 +121,9 @@ internal class ExpansionDownloaderEngine(
             }
         }
 
-        val files = (0 until urls).map { i ->
-            tracker.getKnownDownload(i)?.copy(
-                name = policy.getExpansionFileName(i),
-                size = policy.getExpansionFileSize(i),
-                url = policy.getExpansionURL(i)
-            ) ?: ExpansionFile(
+        (0 until urls).mapNotNull { i ->
+            val old = tracker.getKnownDownload(i)
+            val new = ExpansionFile(
                 isMain = i == 0,
                 name = policy.getExpansionFileName(i),
                 size = policy.getExpansionFileSize(i),
@@ -129,13 +131,24 @@ internal class ExpansionDownloaderEngine(
                 downloaded = 0,
                 etag = null
             )
+
+            if (old == null
+                || old.name != new.name
+                || old.size != new.size
+            ) {
+                // return and save the new file
+                new
+            } else {
+                // nothing changed
+                null
+            }
+        }.onEach {
+            tracker.save(it)
+        }.filter {
+            it.downloaded < it.size
+        }.also {
+            tracker.markUpdated(service)
         }
-
-        files.forEach(tracker::save)
-
-        tracker.markUpdated(service)
-
-        files
     }
 
     private fun downloadFile(file: ExpansionFile, notifier: Notifier): Completable = Completable.fromAction {
@@ -317,7 +330,9 @@ internal class ExpansionDownloaderEngine(
 
         if (responseCode != expected) {
             // TODO better state?
-            throw ApkExpansionException(Notifier.STATE_PAUSED_NETWORK_UNAVAILABLE)
+            throw ApkExpansionException(Notifier.STATE_PAUSED_NETWORK_UNAVAILABLE,
+                "Expected $expected from ${file.url} but got $responseCode"
+            )
         }
     }
 
