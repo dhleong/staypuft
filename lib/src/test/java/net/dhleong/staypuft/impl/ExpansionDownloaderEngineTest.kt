@@ -1,6 +1,7 @@
 package net.dhleong.staypuft.impl
 
 import assertk.assert
+import assertk.assertions.exists
 import assertk.assertions.hasText
 import com.google.android.vending.licensing.APKExpansionPolicy
 import com.nhaarman.mockito_kotlin.any
@@ -97,18 +98,24 @@ class ExpansionDownloaderEngineTest {
             withKnownMain(
                 existingContent = "main-content",
                 sizeFromContent = "main-content",
-                doCreateFile = false // we want to verify that we didn't download
+                doCreateFile = true
             )
             withMainFile(content = "main-content")
 
             withPatchFile(content = "patch-content")
         }
 
+        val mainFile = env.main.first
+        assert(mainFile.localFile(service)) {
+            exists()
+            hasText("main-content")
+        }
+
         processDownload(
             licenceCheckerResult = LicenceCheckerResult.Allowed(0)
         )
 
-        val mainFile = env.main.first
+        // we should not have attempted to download the main file!
         verify(service, never()).openUrl(eq(mainFile.url))
 
         val (patchFile, connection) = env.patch
@@ -117,20 +124,49 @@ class ExpansionDownloaderEngineTest {
         verify(tracker).save(eq(patchFile))
         verify(notifier).done()
 
-        // we should not have downloaded the main file...
-        assert(mainFile.localTmpFile(service)).doesNotExist()
-        assert(mainFile.localFile(service)).doesNotExist()
-
-        // ... but we should have downloaded the new patch!
+        // we should have downloaded the new patch!
         assert(patchFile.localTmpFile(service)).doesNotExist()
         assert(patchFile.localFile(service)).hasText("patch-content")
+    }
+
+    @Test fun `Restore file that was unexpectedly deleted`() {
+        val env = prepareEnvironment {
+            withKnownMain(
+                existingContent = "main-content",
+                sizeFromContent = "main-content",
+                doCreateFile = false
+            )
+            withMainFile(content = "main-content")
+        }
+
+        // should not exist yet
+        val mainFile = env.main.first
+        assert(mainFile.localFile(service)).doesNotExist()
+
+        processDownload(
+            licenceCheckerResult = LicenceCheckerResult.Allowed(0)
+        )
+
+        // we connected to the server to fetch it
+        verify(service).openUrl(eq(mainFile.url))
+
+        verify(tracker).save(eq(mainFile))
+        verify(tracker).save(eq(mainFile.copy(
+            downloaded = mainFile.size
+        )))
+        verify(notifier).done()
+
+        // we should have downloaded the main file
+        assert(mainFile.localTmpFile(service)).doesNotExist()
+        assert(mainFile.localFile(service)).exists()
     }
 
     @Test fun `Resume partial download`() {
         val env = prepareEnvironment {
             withKnownMain(
                 existingContent = "main-",
-                sizeFromContent = "main-content"
+                sizeFromContent = "main-content",
+                doCreateTmpFile = true
             )
 
             withMainFile(
@@ -222,11 +258,13 @@ class ExpansionDownloaderEngineTest {
             existingContent: String,
             size: Long = -1,
             sizeFromContent: String? = null,
-            doCreateFile: Boolean = true
+            doCreateTmpFile: Boolean = false,
+            doCreateFile: Boolean = false
         ) = withKnownDownload(
             0, "main", existingContent,
             size = size,
             sizeFromContent = sizeFromContent,
+            doCreateTmpFile = doCreateTmpFile,
             doCreateFile = doCreateFile
         )
 
@@ -236,6 +274,7 @@ class ExpansionDownloaderEngineTest {
             existingContent: String,
             size: Long,
             sizeFromContent: String?,
+            doCreateTmpFile: Boolean,
             doCreateFile: Boolean
         ): ExpansionFile {
 
@@ -258,8 +297,11 @@ class ExpansionDownloaderEngineTest {
             }
             knownFiles[index] = download
 
-            if (doCreateFile) {
+            if (doCreateTmpFile) {
                 download.localTmpFile(service)
+                    .writeText(existingContent)
+            } else if (doCreateFile) {
+                download.localFile(service)
                     .writeText(existingContent)
             }
 

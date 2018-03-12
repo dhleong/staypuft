@@ -3,6 +3,7 @@ package net.dhleong.staypuft.impl
 import android.content.Context
 import android.content.Intent
 import android.support.v4.content.LocalBroadcastManager
+import android.util.Log
 import net.dhleong.staypuft.ApkExpansionException
 import net.dhleong.staypuft.Notifier
 
@@ -41,6 +42,7 @@ internal class DefaultUIProxy(
     private val lbm: LocalBroadcastManager = LocalBroadcastManager.getInstance(context)
 
     override fun statusChanged(status: Int) {
+        Log.v(NOTIFY_TAG, "Downloader status: $status")
         lbm.sendBroadcast(
             Intent(UIProxy.ACTION_STATUS_CHANGE).apply {
                 putExtra(UIProxy.EXTRA_STATUS, status)
@@ -57,4 +59,7 @@ internal class DefaultUIProxy(
         )
     }
 
+    companion object {
+        private const val NOTIFY_TAG = "net.dhleong.staypuft.ui"
+    }
 }

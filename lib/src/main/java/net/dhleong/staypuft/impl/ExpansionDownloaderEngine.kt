@@ -132,10 +132,14 @@ internal class ExpansionDownloaderEngine(
                 etag = null
             )
 
-            if (old == null
-                || old.name != new.name
-                || old.size != new.size
-            ) {
+            val localExists = new.checkLocalExists(service)
+            val nameMatches = old?.name == new.name
+            val sizeMatches = old?.size == new.size
+            if (old != null && nameMatches && sizeMatches && !localExists
+                && old.downloaded < old.size)  {
+                // attempt to continue downloading the old file
+                old
+            } else if (old == null || !nameMatches || !sizeMatches || !localExists) {
                 // return and save the new file
                 new
             } else {
