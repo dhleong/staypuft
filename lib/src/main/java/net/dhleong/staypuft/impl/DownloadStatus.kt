@@ -12,16 +12,16 @@ internal interface DownloadStatus {
          *  know for certain the actual status. This probably
          *  means the user just updated the APK.
          */
-        const val LVL_CHECK_REQUIRED = 1
+        const val LVL_CHECK_REQUIRED = 2
 
         /**
          * We need to download one or both files
          */
-        const val DOWNLOAD_NEEDED = 2
+        const val DOWNLOAD_NEEDED = 3
 
         /**
          * Everything is up-to-date and ready to go
          */
-        const val READY = 3
+        const val READY = 4
     }
 }

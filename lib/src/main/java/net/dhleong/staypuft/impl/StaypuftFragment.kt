@@ -8,6 +8,7 @@ import android.content.Intent
 import android.content.IntentFilter
 import android.os.Bundle
 import android.support.v4.content.LocalBroadcastManager
+import android.util.Log
 import io.reactivex.Observer
 import io.reactivex.Single
 import io.reactivex.android.schedulers.AndroidSchedulers
@@ -43,45 +44,54 @@ class StaypuftFragment : Fragment() {
         }
     }
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        super.onCreate(savedInstanceState)
+    override fun onAttach(context: Context?) {
+        super.onAttach(context)
 
-        // stick around
-        retainInstance = true
-
-        stateEvents.onNext(DownloadState.Checking())
-        downloadsTracker = PrefsDownloadsTracker(activity)
+        downloadsTracker = PrefsDownloadsTracker(activity.applicationContext)
 
         // if we have a config, go ahead and check
         myConfig?.let(::performDownloadStatusCheck)
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
 
+        // stick around
+        retainInstance = true
+    }
+
+    override fun onStop() {
+        super.onStop()
+
+        Log.v(TAG, "onStop")
         unregisterStateReceiver()
         subs.clear()
     }
 
     private fun performDownloadStatusCheck(config: DownloaderConfig) {
+        Log.v(TAG, "Performing download status check")
         subs.add(
             checkDownloadStatus()
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe { status -> when (status) {
                     DownloadStatus.READY -> {
+                        Log.v(TAG, "DB Ready")
                         stateEvents.onNext(DownloadState.Ready())
                     }
 
                     DownloadStatus.UNKNOWN -> {
+                        Log.v(TAG, "DB status unknown!")
                         stateEvents.onNext(DownloadState.Checking())
                     }
 
                     else -> {
+                        Log.v(TAG, "Need to fetch DB...")
                         stateEvents.onNext(DownloadState.Unavailable())
 
                         // TODO raise notification immediately?
                         activity?.let { context ->
+                            Log.v(TAG, "Starting DB Service")
                             registerStateReceiver()
                             ExpansionDownloaderService.start(
                                 context,
@@ -94,15 +104,22 @@ class StaypuftFragment : Fragment() {
     }
 
     private fun checkDownloadStatus(): Single<Int> = Single.fromCallable {
+        Log.v(TAG, "checkDownloadStatus...")
         if (downloadsTracker.needsUpdate()) {
             DownloadStatus.LVL_CHECK_REQUIRED
         } else {
             val context = activity
-            if (context == null) DownloadStatus.DOWNLOAD_NEEDED
-            else {
+            if (context == null) {
+                // NOTE: in this case we've been detached from context, probably
+                // for a config change. We'll be re-attached soon enough and try
+                // again, so just sit tight
+                DownloadStatus.UNKNOWN
+            } else {
                 val allFilesExist = downloadsTracker.getKnownDownloads().any {
                     it.checkLocalExists(SaveDirectoryWrapper(context))
                 }
+
+                Log.v(TAG, "All Files exist? $allFilesExist")
                 if (allFilesExist) DownloadStatus.READY
                 else DownloadStatus.DOWNLOAD_NEEDED
             }
