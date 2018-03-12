@@ -104,7 +104,7 @@ open class DefaultNotifier(
         private const val NOTIFY_ID = 78297838
 
         fun withChannelId(channelId: String) = Notifier.Factory.Config(
-            Notifier.Factory::class.java,
+            DefaultNotifier.Factory::class.java,
             PersistableBundle().apply {
                 putString("channelId", channelId)
             }
