@@ -102,7 +102,8 @@ verify(versionTag.exists())\
 # Make sure all the tests pass
 #
 
-verify(Execute("gradle test")).succeeds(silent=False).orElse(die())
+gradlew = gradle.Gradle()
+verify(gradlew).executes("test").orElse(die())
 
 #
 # Build the release notes
