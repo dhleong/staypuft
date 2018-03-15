@@ -2,9 +2,11 @@ package net.dhleong.staypuft.impl
 
 import android.content.Context
 import com.google.android.vending.licensing.APKExpansionPolicy
+import com.google.android.vending.licensing.LicenseChecker
 import io.reactivex.Single
 import net.dhleong.staypuft.DownloaderConfig
 import net.dhleong.staypuft.rx.LicenceCheckerResult
+import net.dhleong.staypuft.rx.checkAccess
 import net.dhleong.staypuft.rx.getAvailableBytes
 import net.dhleong.staypuft.rx.getFilesystemRoot
 import net.dhleong.staypuft.rx.getPackageInfo
@@ -24,7 +26,10 @@ interface IExpansionDownloaderService : IHasSaveDirectory {
     fun checkLicenseAccess(
         config: DownloaderConfig,
         policy: APKExpansionPolicy
-    ): Single<LicenceCheckerResult>
+    ): Single<LicenceCheckerResult> {
+        val checker = LicenseChecker(getApplicationContext(), policy, config.publicKey)
+        return checker.checkAccess()
+    }
 
     /**
      * create the APKExpansionPolicy

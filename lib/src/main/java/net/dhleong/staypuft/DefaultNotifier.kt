@@ -5,7 +5,6 @@ import android.app.PendingIntent
 import android.content.Context
 import android.os.PersistableBundle
 import android.support.v4.app.NotificationCompat
-import android.util.Log
 
 /**
  * @author dhleong
@@ -13,7 +12,7 @@ import android.util.Log
 @Suppress("MemberVisibilityCanBePrivate")
 open class DefaultNotifier(
     protected val context: Context,
-    protected val channelId: String
+    channelId: String
 ) : Notifier {
 
     protected val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
@@ -56,8 +55,7 @@ open class DefaultNotifier(
     override fun statusChanged(state: Int) {
         val stateText = context.getString(Staypuft.getStringResForState(state))
 
-        Log.v(NOTIFY_TAG, "Downloader status: $stateText")
-        notify(progressBuilder.apply {
+        notify(simpleBuilder.apply {
             setContentIntent(pendingIntent)
             setContentTitle(appLabel)
             setContentText(stateText)

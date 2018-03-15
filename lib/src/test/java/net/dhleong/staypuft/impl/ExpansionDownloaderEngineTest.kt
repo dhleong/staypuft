@@ -200,7 +200,8 @@ class ExpansionDownloaderEngineTest {
             licenceCheckerResult = LicenceCheckerResult.Allowed(0)
         ) {
             assertError {
-                (it as ApkExpansionException).state == Notifier.STATE_PAUSED_NETWORK_SETUP_FAILURE
+                if (it !is ApkExpansionException) throw it
+                it.state == Notifier.STATE_PAUSED_NETWORK_SETUP_FAILURE
                     && it.message!!.contains("Incorrect file size")
             }
         }

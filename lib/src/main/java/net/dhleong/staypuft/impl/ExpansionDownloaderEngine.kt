@@ -46,6 +46,10 @@ internal class ExpansionDownloaderEngine(
     ): Completable = Completable.defer {
 
         val policy = service.createPolicy(config)
+
+        // reset the policy to force a re-check
+        policy.resetPolicy()
+
         service.checkLicenseAccess(config, policy)
             .subscribeOn(scheduler)
             .map {

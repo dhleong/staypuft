@@ -58,7 +58,7 @@ class ExpansionDownloaderService : JobService(), IExpansionDownloaderService {
             engine.processDownload(config!!, notifier!!)
                 .toSingleDefault(false)
                 .onErrorReturn { e ->
-                    Log.v("staypuft", "Error processing download", e)
+                    Log.w("staypuft", "Error processing download", e)
                     true
                 }
                 .subscribe { needsReschedule ->
@@ -67,14 +67,6 @@ class ExpansionDownloaderService : JobService(), IExpansionDownloaderService {
         )
 
         return true // going async
-    }
-
-    override fun checkLicenseAccess(
-        config: DownloaderConfig,
-        policy: APKExpansionPolicy
-    ): Single<LicenceCheckerResult> {
-        val checker = LicenseChecker(applicationContext, policy, config.publicKey)
-        return checker.checkAccess()
     }
 
     override fun createPolicy(config: DownloaderConfig): APKExpansionPolicy {

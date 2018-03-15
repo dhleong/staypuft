@@ -63,35 +63,30 @@ class StaypuftFragment : Fragment() {
     override fun onStop() {
         super.onStop()
 
-        Log.v(TAG, "onStop")
         unregisterStateReceiver()
         subs.clear()
     }
 
     private fun performDownloadStatusCheck(config: DownloaderConfig) {
-        Log.v(TAG, "Performing download status check")
         subs.add(
             checkDownloadStatus()
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe { status -> when (status) {
                     DownloadStatus.READY -> {
-                        Log.v(TAG, "DB Ready")
                         stateEvents.onNext(DownloadState.Ready())
                     }
 
                     DownloadStatus.UNKNOWN -> {
-                        Log.v(TAG, "DB status unknown!")
                         stateEvents.onNext(DownloadState.Checking())
                     }
 
                     else -> {
-                        Log.v(TAG, "Need to fetch DB...")
                         stateEvents.onNext(DownloadState.Unavailable())
 
                         // TODO raise notification immediately?
                         activity?.let { context ->
-                            Log.v(TAG, "Starting DB Service")
+                            Log.v(TAG, "Starting Downloader Service")
                             registerStateReceiver()
                             ExpansionDownloaderService.start(
                                 context,
@@ -104,7 +99,6 @@ class StaypuftFragment : Fragment() {
     }
 
     private fun checkDownloadStatus(): Single<Int> = Single.fromCallable {
-        Log.v(TAG, "checkDownloadStatus...")
         if (downloadsTracker.needsUpdate()) {
             DownloadStatus.LVL_CHECK_REQUIRED
         } else {
@@ -119,7 +113,6 @@ class StaypuftFragment : Fragment() {
                     it.checkLocalExists(SaveDirectoryWrapper(context))
                 }
 
-                Log.v(TAG, "All Files exist? $allFilesExist")
                 if (allFilesExist) DownloadStatus.READY
                 else DownloadStatus.DOWNLOAD_NEEDED
             }

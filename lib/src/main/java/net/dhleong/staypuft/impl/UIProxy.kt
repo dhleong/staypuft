@@ -42,21 +42,22 @@ internal class DefaultUIProxy(
     private val lbm: LocalBroadcastManager = LocalBroadcastManager.getInstance(context)
 
     override fun statusChanged(status: Int) {
-        Log.v(NOTIFY_TAG, "Downloader status: $status")
-        lbm.sendBroadcast(
-            Intent(UIProxy.ACTION_STATUS_CHANGE).apply {
-                putExtra(UIProxy.EXTRA_STATUS, status)
-            }
-        )
+        broadcastIntent(UIProxy.ACTION_STATUS_CHANGE) {
+            putExtra(UIProxy.EXTRA_STATUS, status)
+        }
     }
 
     override fun progress(downloaded: Long, total: Long) {
-        lbm.sendBroadcast(
-            Intent(UIProxy.ACTION_PROGRESS).apply {
-                putExtra(UIProxy.EXTRA_DOWNLOADED, downloaded)
-                putExtra(UIProxy.EXTRA_TOTAL_BYTES, total)
-            }
-        )
+        broadcastIntent(UIProxy.ACTION_PROGRESS) {
+            putExtra(UIProxy.EXTRA_DOWNLOADED, downloaded)
+            putExtra(UIProxy.EXTRA_TOTAL_BYTES, total)
+        }
+    }
+
+    private fun broadcastIntent(action: String, intentBuilder: Intent.() -> Unit) {
+        if (!lbm.sendBroadcast(Intent(action).apply(intentBuilder))) {
+            Log.v(NOTIFY_TAG, "Nobody received $action")
+        }
     }
 
     companion object {

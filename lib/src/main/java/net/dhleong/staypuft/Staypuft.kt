@@ -14,14 +14,31 @@ class Staypuft private constructor(
     private val fragment: StaypuftFragment
 ) {
 
+    /**
+     * Initialize a download request using the provided [DownloaderConfig],
+     *  or update an existing request (to allow cellular data usage, for example)
+     */
     fun setConfig(config: DownloaderConfig) {
         fragment.setConfig(config)
     }
 
+    /**
+     * An observable stream of [DownloadState]
+     */
     val stateEvents: Observable<DownloadState>
         get() = fragment.stateEvents
 
     companion object {
+        /**
+         * Get a new instance of [Staypuft] from the given Activity context.
+         *  Each call may create a new [Staypuft] instance, but they will
+         *  generally share internal state by relying on a retained fragment.
+         *
+         * NOTE: This does mean, however, that calling [getInstance] twice
+         *  in a row will result in the first one not getting state updates,
+         *  since it will have an old fragment that got replaced by the
+         *  second's (thanks to fragment transactions).
+         */
         fun getInstance(activity: Activity): Staypuft {
             val fm = activity.fragmentManager
             val existing = fm.findFragmentByTag(StaypuftFragment.TAG)
@@ -36,6 +53,10 @@ class Staypuft private constructor(
             return Staypuft(new)
         }
 
+        /**
+         * Given a [state] constant (see const fields on [Notifier]),
+         *  get a string resource that describes that state.
+         */
         @StringRes
         fun getStringResForState(state: Int): Int = when (state) {
             Notifier.STATE_IDLE -> R.string.state_idle
