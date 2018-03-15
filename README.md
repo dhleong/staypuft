@@ -1,4 +1,4 @@
-# staypuft
+# staypuft [![Release](https://jitpack.io/v/dhleong/staypuft.svg)](https://jitpack.io/#dhleong/staypuft)
 
 *Save the world, one oversized APK at a time*
 
