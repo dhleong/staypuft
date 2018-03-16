@@ -1,6 +1,8 @@
 package net.dhleong.staypuft
 
 import android.content.Context
+import android.os.Parcel
+import android.os.Parcelable
 import android.os.PersistableBundle
 
 class ApkExpansionException(
@@ -23,12 +25,57 @@ interface Notifier {
 
     interface Factory {
 
+        /**
+         * Create a [Notifier] configured with the given [config] and [args].
+         */
+        fun create(
+            context: Context,
+            config: DownloaderConfig,
+            args: PersistableBundle?
+        ): Notifier
+
         class Config(
             val klass: Class<out Factory>,
             val arg: PersistableBundle?
-        ) {
+        ) : Parcelable {
 
-            fun inflate(context: Context): Notifier = klass.newInstance().create(context, arg)
+            /**
+             * Inflate an instance of the [Notifier] this [Config] refers to,
+             *  using an instantiated object the [Factory] class provided
+             */
+            fun inflate(context: Context, config: DownloaderConfig): Notifier =
+                klass.newInstance().create(context, config, arg)
+
+            /*
+                Parcelable implementation
+             */
+
+            @Suppress("UNCHECKED_CAST")
+            private constructor(parcel: Parcel) : this(
+                Class.forName(parcel.readString()) as Class<out Factory>,
+                parcel.readParcelable(PersistableBundle::class.java.classLoader)
+            )
+
+            override fun writeToParcel(parcel: Parcel, flags: Int) {
+                parcel.writeString(klass.name)
+                parcel.writeParcelable(arg, flags)
+            }
+
+            override fun describeContents(): Int {
+                return 0
+            }
+
+            @JvmField val CREATOR = object : Parcelable.Creator<Config> {
+                override fun createFromParcel(parcel: Parcel): Config {
+                    return Config(parcel)
+                }
+
+                override fun newArray(size: Int): Array<Config?> {
+                    return arrayOfNulls(size)
+                }
+            }
+
+            /* end parcelable */
 
             companion object {
                 @Suppress("UNCHECKED_CAST")
@@ -36,13 +83,11 @@ interface Notifier {
                     className: String,
                     arg: PersistableBundle
                 ) = Config(
-                    Class.forName(className) as Class<Factory>,
+                    Class.forName(className) as Class<out Factory>,
                     arg
                 )
             }
         }
-
-        fun create(context: Context, args: PersistableBundle?): Notifier
     }
 
     companion object {

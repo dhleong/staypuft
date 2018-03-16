@@ -89,11 +89,10 @@ class StaypuftFragment : Fragment() {
                     else -> {
                         stateEvents.onNext(DownloadState.Unavailable())
 
-                        // TODO raise notification immediately?
                         activity?.let { context ->
                             Log.v(TAG, "Starting Downloader Service")
                             registerStateReceiver()
-                            ExpansionDownloaderService.start(
+                            ExpansionDownloaderFgService.start(
                                 context,
                                 config
                             )

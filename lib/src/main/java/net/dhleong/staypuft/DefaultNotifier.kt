@@ -12,6 +12,7 @@ import android.support.v4.app.NotificationCompat
 @Suppress("MemberVisibilityCanBePrivate")
 open class DefaultNotifier(
     protected val context: Context,
+    protected val notificationId: Int,
     channelId: String
 ) : Notifier {
 
@@ -78,7 +79,7 @@ open class DefaultNotifier(
     }
 
     protected fun notify(builder: NotificationCompat.Builder) {
-        nm.notify(NOTIFY_TAG, NOTIFY_ID, builder.build())
+        nm.notify(notificationId, builder.build())
     }
 
     protected open fun getPendingIntent(context: Context): PendingIntent =
@@ -92,15 +93,11 @@ open class DefaultNotifier(
         )
 
     class Factory : Notifier.Factory {
-        override fun create(context: Context, args: PersistableBundle?) =
-            DefaultNotifier(context, args!!.getString("channelId"))
+        override fun create(context: Context, config: DownloaderConfig, args: PersistableBundle?) =
+            DefaultNotifier(context, config.notificationId, args!!.getString("channelId"))
     }
 
     companion object {
-
-        private const val NOTIFY_TAG = "net.dhleong.staypuft"
-        private const val NOTIFY_ID = 78297838
-
         fun withChannelId(channelId: String) = Notifier.Factory.Config(
             DefaultNotifier.Factory::class.java,
             PersistableBundle().apply {

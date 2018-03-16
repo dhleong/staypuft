@@ -14,7 +14,7 @@
         android:name="android.permission.READ_EXTERNAL_STORAGE"/>
 
     <application>
-        <service android:name=".impl.ExpansionDownloaderService"
+        <service android:name=".impl.ExpansionDownloaderJobService"
             android:permission="android.permission.BIND_JOB_SERVICE" />
     </application>
 
