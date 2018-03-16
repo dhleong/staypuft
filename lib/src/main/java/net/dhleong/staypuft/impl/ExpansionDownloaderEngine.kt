@@ -346,10 +346,16 @@ internal class ExpansionDownloaderEngine(
         }
     }
 
+    /**
+     * Ensure any active downloads stop. It is safe to call this multiple times
+     */
     fun stop() {
         running.set(false)
     }
 
+    /**
+     * Allow downloads. It is safe to call this multiple times
+     */
     fun start() {
         running.set(true)
     }

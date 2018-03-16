@@ -1,5 +1,6 @@
 package net.dhleong.staypuft
 
+import android.app.Notification
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
@@ -54,9 +55,14 @@ open class DefaultNotifier(
     }
 
     override fun statusChanged(state: Int) {
-        val stateText = context.getString(Staypuft.getStringResForState(state))
+        notify(buildForStatus(state))
+    }
 
-        notify(simpleBuilder.apply {
+    override fun build(state: Int): Notification = buildForStatus(state).build()
+
+    private fun buildForStatus(state: Int): NotificationCompat.Builder {
+        val stateText = context.getString(Staypuft.getStringResForState(state))
+        return simpleBuilder.apply {
             setContentIntent(pendingIntent)
             setContentTitle(appLabel)
             setContentText(stateText)
@@ -71,7 +77,7 @@ open class DefaultNotifier(
 
                 else -> android.R.drawable.stat_sys_warning
             })
-        })
+        }
     }
 
     override fun error(e: ApkExpansionException) {

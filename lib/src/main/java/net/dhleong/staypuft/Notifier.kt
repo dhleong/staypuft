@@ -1,5 +1,6 @@
 package net.dhleong.staypuft
 
+import android.app.Notification
 import android.content.Context
 import android.os.Parcel
 import android.os.Parcelable
@@ -22,6 +23,12 @@ interface Notifier {
     fun progress(downloaded: Long, size: Long)
     fun statusChanged(state: Int)
     fun error(e: ApkExpansionException)
+
+    /**
+     * Build a notification for the given [state]. This
+     *  will probably only be used for [android.app.Service.startForeground].
+     */
+    fun build(state: Int): Notification
 
     interface Factory {
 
