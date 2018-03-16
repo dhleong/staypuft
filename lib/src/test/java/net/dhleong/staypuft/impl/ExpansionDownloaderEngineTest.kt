@@ -6,6 +6,7 @@ import assertk.assertions.hasText
 import com.google.android.vending.licensing.APKExpansionPolicy
 import com.nhaarman.mockito_kotlin.any
 import com.nhaarman.mockito_kotlin.anyOrNull
+import com.nhaarman.mockito_kotlin.argThat
 import com.nhaarman.mockito_kotlin.doAnswer
 import com.nhaarman.mockito_kotlin.doReturn
 import com.nhaarman.mockito_kotlin.eq
@@ -61,7 +62,7 @@ class ExpansionDownloaderEngineTest {
             on { createPolicy(any()) } doReturn policy
             on { checkLicenseAccess(anyOrNull(), anyOrNull()) } doReturn licenseAccessResults.firstOrError()
             on { getAvailableBytes(any()) } doReturn 1024 * 1024
-            on { getSaveDirectory() } doReturn testDownloadsDir
+            on { getExpansionFilesDirectory() } doReturn testDownloadsDir
         }
         uiProxy = mock {  }
         tracker = mock { }
@@ -88,6 +89,10 @@ class ExpansionDownloaderEngineTest {
         verify(connection).disconnect()
         verify(tracker).save(eq(file))
         verify(notifier).done()
+
+        verify(uiProxy).done(argThat {
+            size == 1 && this[0].localFile(service) == File(testDownloadsDir, "main")
+        })
 
         assert(file.localTmpFile(service)).doesNotExist()
         assert(file.localFile(service)).hasText("main-content")

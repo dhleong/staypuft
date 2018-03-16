@@ -10,7 +10,7 @@ import net.dhleong.staypuft.rx.checkAccess
 import net.dhleong.staypuft.rx.getAvailableBytes
 import net.dhleong.staypuft.rx.getFilesystemRoot
 import net.dhleong.staypuft.rx.getPackageInfo
-import net.dhleong.staypuft.rx.getSaveDirectory
+import net.dhleong.staypuft.rx.getExpansionFilesDirectory
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
@@ -46,8 +46,8 @@ interface IExpansionDownloaderService : IHasSaveDirectory {
     fun getAvailableBytes(path: File): Long =
         path.getFilesystemRoot().getAvailableBytes()
 
-    override fun getSaveDirectory(): File =
-        getApplicationContext().getSaveDirectory()
+    override fun getExpansionFilesDirectory(): File =
+        getApplicationContext().getExpansionFilesDirectory()
 
     fun getApkVersionCode(): Int =
         getApplicationContext().getPackageInfo().versionCode

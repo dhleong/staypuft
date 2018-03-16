@@ -18,7 +18,7 @@ import io.reactivex.subjects.BehaviorSubject
 import net.dhleong.staypuft.DownloadState
 import net.dhleong.staypuft.DownloaderConfig
 import net.dhleong.staypuft.Notifier
-import net.dhleong.staypuft.rx.getSaveDirectory
+import net.dhleong.staypuft.rx.getExpansionFilesDirectory
 import java.io.File
 
 
@@ -68,13 +68,18 @@ class StaypuftFragment : Fragment() {
     }
 
     private fun performDownloadStatusCheck(config: DownloaderConfig) {
+        val saveDirectory = activity.getExpansionFilesDirectory()
         subs.add(
             checkDownloadStatus()
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe { status -> when (status) {
                     DownloadStatus.READY -> {
-                        stateEvents.onNext(DownloadState.Ready())
+                        stateEvents.onNext(DownloadState.Ready(
+                            downloadsTracker.getKnownDownloads().map {
+                                it.localFile(saveDirectory)
+                            }.toList()
+                        ))
                     }
 
                     DownloadStatus.UNKNOWN -> {
@@ -148,8 +153,8 @@ class StaypuftFragment : Fragment() {
     private class SaveDirectoryWrapper(
         private val context: Activity
     ) : IHasSaveDirectory {
-        override fun getSaveDirectory(): File =
-            (context as Context).getSaveDirectory()
+        override fun getExpansionFilesDirectory(): File =
+            (context as Context).getExpansionFilesDirectory()
     }
 
     companion object {
@@ -167,7 +172,10 @@ private class ServiceStateReceiver(
     override fun onReceive(context: Context, intent: Intent) {
         when (intent.action) {
             UIProxy.ACTION_STATUS_CHANGE -> {
-                notifyStatusChange(intent.getIntExtra(UIProxy.EXTRA_STATUS, 0))
+                notifyStatusChange(
+                    intent.getIntExtra(UIProxy.EXTRA_STATUS, 0),
+                    intent.getStringArrayListExtra(UIProxy.EXTRA_FILES)
+                )
             }
 
             UIProxy.ACTION_PROGRESS -> {
@@ -178,13 +186,13 @@ private class ServiceStateReceiver(
         }
     }
 
-    private fun notifyStatusChange(status: Int) {
+    private fun notifyStatusChange(status: Int, files: List<String>? = null) {
         val state = when (status) {
             Notifier.STATE_CONNECTING,
             Notifier.STATE_FETCHING_URL,
             Notifier.STATE_DOWNLOADING -> DownloadState.Downloading(lastDownloaded, lastTotalBytes)
 
-            Notifier.STATE_COMPLETED -> DownloadState.Ready()
+            Notifier.STATE_COMPLETED -> DownloadState.Ready(files!!.map(::File))
 
             // TODO
 

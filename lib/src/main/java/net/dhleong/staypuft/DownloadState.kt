@@ -1,5 +1,7 @@
 package net.dhleong.staypuft
 
+import java.io.File
+
 /**
  * @author dhleong
  */
@@ -7,7 +9,14 @@ sealed class DownloadState {
     /**
      * All files are downloaded and available
      */
-    class Ready : DownloadState()
+    class Ready(
+        files: List<File>
+    ) : DownloadState() {
+
+        val main: File = files[0]
+        val patch: File? = files.elementAtOrNull(1)
+        
+    }
 
     /**
      * We have no idea, yet

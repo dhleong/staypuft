@@ -136,16 +136,16 @@ data class ExpansionFile(
         return false
     }
 
-    fun localFile(context: IHasSaveDirectory): File = File(
-        context.getSaveDirectory(),
-        name
-    )
+    fun localFile(context: IHasSaveDirectory): File =
+        localFile(context.getExpansionFilesDirectory())
+
+    fun localFile(saveDirectory: File): File = File(saveDirectory, name)
 
     /**
      * Temporary path where we should initially download the file
      */
     fun localTmpFile(context: IHasSaveDirectory): File = File(
-        context.getSaveDirectory(),
+        context.getExpansionFilesDirectory(),
         "$name.$TMP_EXT"
     )
 

@@ -73,18 +73,18 @@ internal class ExpansionDownloaderEngine(
                 is LicenceCheckerResult.Allowed ->
                     updateLVLCacheAndGetFilesToDownload(policy)
             } }
-            .flatMapCompletable { files ->
+            .flatMap { files ->
                 throwIfNotRunning()
 
                 Observable.fromIterable(files)
-                    .flatMapCompletable {
+                    .flatMapSingle {
                         downloadFile(it, notifier)
-                    }
+                    }.toList()
             }
-            .doOnComplete {
+            .doOnSuccess { files ->
                 // completed successfully
                 notifier.done()
-                uiProxy.done()
+                uiProxy.done(files)
             }
             .doOnError { e ->
                 // failed, or paused
@@ -104,7 +104,7 @@ internal class ExpansionDownloaderEngine(
                         Log.e(TAG, "Unexpected error downloading APK expansion", e)
                     }
                 }
-            }
+            }.toCompletable()
     }
 
     /**
@@ -159,7 +159,7 @@ internal class ExpansionDownloaderEngine(
         }
     }
 
-    private fun downloadFile(file: ExpansionFile, notifier: Notifier): Completable = Completable.fromAction {
+    private fun downloadFile(file: ExpansionFile, notifier: Notifier): Single<ExpansionFile> = Single.fromCallable {
         val dest = prepareDestFile(file)
 
         val conn = service.openUrl(file.url)
@@ -186,6 +186,8 @@ internal class ExpansionDownloaderEngine(
         }
 
         finalizeDownload(file, dest)
+
+        file
     }
 
     private fun prepareDestFile(file: ExpansionFile): File {

@@ -23,14 +23,14 @@ val apkx = Staypuft.getInstance(activity).apply {
 That's it! If you want to get status updates, just subscribe to them:
 
 ```kotlin
-apkx.stateEvents
-    .subscribe { event ->
-        when (event) {
-            is DownloadState.Ready -> {
-                // done!
-            }
+apkx.stateEvents.subscribe { event ->
+    when (event) {
+        is DownloadState.Ready -> {
+            // done!
+            println("Got main expansion file at: ${event.main}")
         }
     }
+}
 ```
 
 [1]: https://developer.android.com/google/play/expansion-files.html

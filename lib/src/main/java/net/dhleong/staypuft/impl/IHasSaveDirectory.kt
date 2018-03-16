@@ -11,6 +11,6 @@ interface IHasSaveDirectory {
      * File pointing to the directory we should
      *  save our expansion files into
      */
-    fun getSaveDirectory(): File
+    fun getExpansionFilesDirectory(): File
 
 }
