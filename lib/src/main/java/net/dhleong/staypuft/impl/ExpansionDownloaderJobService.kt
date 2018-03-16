@@ -74,5 +74,10 @@ class ExpansionDownloaderJobService : JobService(), IExpansionDownloaderService 
                 }.build()
             )
         }
+
+        fun cancel(context: Context, config: DownloaderConfig) {
+            val jobs = context.getSystemService(Context.JOB_SCHEDULER_SERVICE) as JobScheduler
+            jobs.cancel(config.jobId)
+        }
     }
 }

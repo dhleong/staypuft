@@ -1,6 +1,7 @@
 package net.dhleong.staypuft.impl
 
 import android.app.IntentService
+import android.app.job.JobScheduler
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -47,6 +48,9 @@ class ExpansionDownloaderFgService
     override fun onHandleIntent(intent: Intent) {
         val config = intent.getParcelableExtra<DownloaderConfig>(EXTRA_CONFIG)
         val notifier = config.inflateNotifier(this)
+
+        // cancel any queued job
+        ExpansionDownloaderJobService.cancel(this, config)
 
         startForeground(config.notificationId, notifier.build(Notifier.STATE_CONNECTING))
         try {
