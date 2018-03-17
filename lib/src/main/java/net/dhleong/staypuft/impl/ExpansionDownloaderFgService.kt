@@ -56,11 +56,18 @@ class ExpansionDownloaderFgService
         startForeground(config.notificationId, notifier.build(Notifier.STATE_CONNECTING))
         try {
             performDownload(config, notifier)
-        } catch (e: PausedException) {
-            // something happened to pause our download... resume later
-            Log.w("staypuft", "Download paused: " + e.state, e)
-            notifier.statusChanged(e.state)
-            uiProxy.statusChanged(e.state)
+        } catch (e: Throwable) {
+            val status = if (e is PausedException) {
+                // something happened to pause our download... resume later
+                Log.w("staypuft", "Download paused: " + e.state, e)
+                e.state
+            } else {
+                // some unexpected error occurred... try again later
+                Log.w("staypuft", "Unexpected error", e)
+                Notifier.STATE_FAILED
+            }
+            notifier.statusChanged(status)
+            uiProxy.statusChanged(status)
             engine.stop()
             ExpansionDownloaderJobService.start(this, config)
         } finally {
