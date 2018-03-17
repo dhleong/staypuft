@@ -6,6 +6,7 @@ import java.io.File
  * @author dhleong
  */
 sealed class DownloadState {
+
     /**
      * All files are downloaded and available
      */
@@ -15,8 +16,17 @@ sealed class DownloadState {
 
         val main: File = files[0]
         val patch: File? = files.elementAtOrNull(1)
-        
+
     }
+
+    /**
+     * Download is paused, due to the [reason] provided,
+     * where [reason] will be one of the `STATE_` constants
+     * on [Notifier]
+     */
+    class Paused(
+        val reason: Int
+    ) : DownloadState()
 
     /**
      * We have no idea, yet
@@ -24,7 +34,7 @@ sealed class DownloadState {
     class Checking : DownloadState()
 
     /**
-     * Download in progress
+     * Download is in progress
      */
     class Downloading(
         val downloadedBytes: Long,
@@ -33,7 +43,11 @@ sealed class DownloadState {
 
     /**
      * One or both expansion files are not yet available,
-     * no download is in progress yet
+     * no download is in progress yet. As with [Paused],
+     * the [reason] will be one of the `STATE_` constants
+     * on [Notifier]
      */
-    class Unavailable : DownloadState()
+    class Unavailable(
+        val reason: Int
+    ): DownloadState()
 }

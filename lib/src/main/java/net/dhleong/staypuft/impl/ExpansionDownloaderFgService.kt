@@ -1,7 +1,6 @@
 package net.dhleong.staypuft.impl
 
 import android.app.IntentService
-import android.app.job.JobScheduler
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -26,14 +25,16 @@ class ExpansionDownloaderFgService
       IExpansionDownloaderService {
 
     private lateinit var engine: ExpansionDownloaderEngine
+    private lateinit var uiProxy: UIProxy
     private lateinit var cm: ConnectivityManager
 
     override fun onCreate() {
         super.onCreate()
 
+        uiProxy = DefaultUIProxy(this)
         engine = ExpansionDownloaderEngine(
             this,
-            DefaultUIProxy(this)
+            uiProxy
         )
 
         cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
@@ -57,7 +58,9 @@ class ExpansionDownloaderFgService
             performDownload(config, notifier)
         } catch (e: PausedException) {
             // something happened to pause our download... resume later
+            Log.w("staypuft", "Download paused: " + e.state, e)
             notifier.statusChanged(e.state)
+            uiProxy.statusChanged(e.state)
             engine.stop()
             ExpansionDownloaderJobService.start(this, config)
         } finally {
@@ -71,7 +74,7 @@ class ExpansionDownloaderFgService
         notifier: Notifier
     ) {
 
-        checkDownloadState(config)
+        checkNetworkState(config)
 
         engine.start()
         Observable.merge(
@@ -79,18 +82,18 @@ class ExpansionDownloaderFgService
                 .toSingleDefault(Unit)
                 .toObservable(),
 
-            watchDownloadState(config)
+            watchNetworkState(config)
         ).firstOrError()
             .blockingGet()
     }
 
-    private fun watchDownloadState(config: DownloaderConfig): Observable<Unit> = Observable.defer {
+    private fun watchNetworkState(config: DownloaderConfig): Observable<Unit> = Observable.defer {
         val subject: PublishSubject<Unit> = PublishSubject.create()
 
         val broadcastReceiver = object : BroadcastReceiver() {
             override fun onReceive(context: Context?, intent: Intent?) {
                 try {
-                    checkDownloadState(config)
+                    checkNetworkState(config)
                 } catch (e: Throwable) {
                     subject.onError(e)
                 }
@@ -113,7 +116,7 @@ class ExpansionDownloaderFgService
         }
     }
 
-    private fun checkDownloadState(config: DownloaderConfig) {
+    private fun checkNetworkState(config: DownloaderConfig) {
         val networkInfo = cm.activeNetworkInfo
             ?: throw PausedException(Notifier.STATE_PAUSED_NETWORK_UNAVAILABLE)
 
@@ -129,15 +132,10 @@ class ExpansionDownloaderFgService
         if (networkInfo.isRoaming) {
             throw PausedException(Notifier.STATE_PAUSED_ROAMING)
         }
-    }
 
-    private fun delayWithState(
-        config: DownloaderConfig,
-        notifier: Notifier,
-        state: Int
-    ) {
-        notifier.statusChanged(state)
-        ExpansionDownloaderJobService.start(this, config)
+        // TODO Check if wifi is disabled
+
+        Log.v("staypuft", "Network state is fine")
     }
 
     companion object {

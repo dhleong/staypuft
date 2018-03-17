@@ -87,7 +87,7 @@ class StaypuftFragment : Fragment() {
                     }
 
                     else -> {
-                        stateEvents.onNext(DownloadState.Unavailable())
+                        stateEvents.onNext(DownloadState.Unavailable(Notifier.STATE_CONNECTING))
 
                         activity?.let { context ->
                             Log.v(TAG, "Starting Downloader Service")
@@ -193,7 +193,21 @@ private class ServiceStateReceiver(
 
             Notifier.STATE_COMPLETED -> DownloadState.Ready(files!!.map(::File))
 
-            // TODO
+            Notifier.STATE_PAUSED_BY_REQUEST,
+            Notifier.STATE_PAUSED_NEED_CELLULAR_PERMISSION,
+            Notifier.STATE_PAUSED_NEED_WIFI,
+            Notifier.STATE_PAUSED_NETWORK_UNAVAILABLE,
+            Notifier.STATE_PAUSED_NETWORK_SETUP_FAILURE,
+            Notifier.STATE_PAUSED_ROAMING,
+            Notifier.STATE_PAUSED_SDCARD_UNAVAILABLE,
+            Notifier.STATE_PAUSED_WIFI_DISABLED,
+            Notifier.STATE_PAUSED_WIFI_DISABLED_NEED_CELLULAR_PERMISSION -> DownloadState.Paused(status)
+
+            Notifier.STATE_FAILED,
+            Notifier.STATE_FAILED_CANCELED,
+            Notifier.STATE_FAILED_UNLICENSED,
+            Notifier.STATE_FAILED_SDCARD_FULL,
+            Notifier.STATE_FAILED_FETCHING_URL -> DownloadState.Unavailable(status)
 
             else -> null
         }

@@ -72,16 +72,6 @@ interface Notifier {
                 return 0
             }
 
-            @JvmField val CREATOR = object : Parcelable.Creator<Config> {
-                override fun createFromParcel(parcel: Parcel): Config {
-                    return Config(parcel)
-                }
-
-                override fun newArray(size: Int): Array<Config?> {
-                    return arrayOfNulls(size)
-                }
-            }
-
             /* end parcelable */
 
             companion object {
@@ -93,6 +83,16 @@ interface Notifier {
                     Class.forName(className) as Class<out Factory>,
                     arg
                 )
+
+                @JvmField val CREATOR = object : Parcelable.Creator<Config> {
+                    override fun createFromParcel(parcel: Parcel): Config {
+                        return Config(parcel)
+                    }
+
+                    override fun newArray(size: Int): Array<Config?> {
+                        return arrayOfNulls(size)
+                    }
+                }
             }
         }
     }

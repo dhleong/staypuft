@@ -22,8 +22,8 @@ data class DownloaderConfig(
 
     val requiredNetworkType: Int
         get() = if (canUseCellularData) {
-            JobInfo.NETWORK_TYPE_UNMETERED
-        } else JobInfo.NETWORK_TYPE_ANY
+            JobInfo.NETWORK_TYPE_ANY
+        } else JobInfo.NETWORK_TYPE_UNMETERED
 
     /**
      * Convenience to instantiate the configured [Notifier]

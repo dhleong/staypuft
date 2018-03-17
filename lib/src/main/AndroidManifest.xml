@@ -16,6 +16,9 @@
     <!-- Required to verify network state (so we don't accidentally download over cellular) -->
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/>
 
+    <!-- Required to check whether Wi-Fi is enabled -->
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE"/>
+
     <application>
         <service android:name=".impl.ExpansionDownloaderJobService"
             android:permission="android.permission.BIND_JOB_SERVICE" />
