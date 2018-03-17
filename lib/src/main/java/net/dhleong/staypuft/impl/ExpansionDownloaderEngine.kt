@@ -143,7 +143,6 @@ internal class ExpansionDownloaderEngine(
                 && old.downloaded < old.size)  {
                 // attempt to continue downloading the old file
                 // (but make sure to use the latest url)
-                Log.v("staypuft", "Continue with $old\n${old.url}\n${new.url}")
                 old.copy(url = new.url)
             } else if (old == null || !nameMatches || !sizeMatches || !localExists) {
                 // return and save the new file
