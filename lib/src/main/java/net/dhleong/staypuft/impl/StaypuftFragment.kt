@@ -90,7 +90,7 @@ class StaypuftFragment : Fragment() {
                         stateEvents.onNext(DownloadState.Unavailable(Notifier.STATE_CONNECTING))
 
                         activity?.let { context ->
-                            Log.v(TAG, "Starting Downloader Service")
+                            Log.v(TAG, "Starting Downloader Service; status=$status")
                             registerStateReceiver()
                             ExpansionDownloaderFgService.start(
                                 context,
