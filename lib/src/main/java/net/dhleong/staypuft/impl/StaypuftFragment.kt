@@ -113,8 +113,9 @@ class StaypuftFragment : Fragment() {
                 // again, so just sit tight
                 DownloadStatus.UNKNOWN
             } else {
+                val service = SaveDirectoryWrapper(context)
                 val allFilesExist = downloadsTracker.getKnownDownloads().any {
-                    it.checkLocalExists(SaveDirectoryWrapper(context))
+                    it.checkLocalExists(service, deleteOnSizeMismatch = true)
                 }
 
                 if (allFilesExist) DownloadStatus.READY
