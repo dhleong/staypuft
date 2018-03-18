@@ -22,6 +22,7 @@ import net.dhleong.staypuft.DefaultNotifier
 import net.dhleong.staypuft.DownloaderConfig
 import net.dhleong.staypuft.Notifier
 import net.dhleong.staypuft.doesNotExist
+import net.dhleong.staypuft.hasLength
 import net.dhleong.staypuft.rx.LicenceCheckerResult
 import org.junit.Before
 import org.junit.Test
@@ -164,6 +165,41 @@ class ExpansionDownloaderEngineTest {
         // we should have downloaded the main file
         assert(mainFile.localTmpFile(service)).doesNotExist()
         assert(mainFile.localFile(service)).exists()
+    }
+
+    @Test fun `Download from scratch on file size mismatch`() {
+        val env = prepareEnvironment {
+            withKnownMain(
+                existingContent = "main",
+                sizeFromContent = "main-content",
+                doCreateFile = true
+            )
+            withMainFile(content = "main-content")
+        }
+
+        // verify wrong size
+        val mainFile = env.main.first
+        assert(mainFile.localFile(service)).hasLength(4)
+
+        processDownload(
+            licenceCheckerResult = LicenceCheckerResult.Allowed(0)
+        )
+
+        // we connected to the server to fetch it
+        verify(service).openUrl(eq(mainFile.url))
+
+        verify(tracker).save(eq(mainFile))
+        verify(tracker).save(eq(mainFile.copy(
+            downloaded = mainFile.size
+        )))
+        verify(notifier).done()
+
+        // we should have downloaded the main file
+        assert(mainFile.localTmpFile(service)).doesNotExist()
+        assert(mainFile.localFile(service)) {
+            exists()
+            hasLength(mainFile.size)
+        }
     }
 
     @Test fun `Resume partial download`() {

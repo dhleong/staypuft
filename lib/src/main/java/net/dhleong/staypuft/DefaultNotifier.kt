@@ -1,5 +1,6 @@
 package net.dhleong.staypuft
 
+import android.app.Notification
 import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
@@ -12,6 +13,7 @@ import android.support.v4.app.NotificationCompat
 @Suppress("MemberVisibilityCanBePrivate")
 open class DefaultNotifier(
     protected val context: Context,
+    protected val notificationId: Int,
     channelId: String
 ) : Notifier {
 
@@ -53,9 +55,14 @@ open class DefaultNotifier(
     }
 
     override fun statusChanged(state: Int) {
-        val stateText = context.getString(Staypuft.getStringResForState(state))
+        notify(buildForStatus(state))
+    }
 
-        notify(simpleBuilder.apply {
+    override fun build(state: Int): Notification = buildForStatus(state).build()
+
+    private fun buildForStatus(state: Int): NotificationCompat.Builder {
+        val stateText = context.getString(Staypuft.getStringResForState(state))
+        return simpleBuilder.apply {
             setContentIntent(pendingIntent)
             setContentTitle(appLabel)
             setContentText(stateText)
@@ -70,7 +77,7 @@ open class DefaultNotifier(
 
                 else -> android.R.drawable.stat_sys_warning
             })
-        })
+        }
     }
 
     override fun error(e: ApkExpansionException) {
@@ -78,7 +85,7 @@ open class DefaultNotifier(
     }
 
     protected fun notify(builder: NotificationCompat.Builder) {
-        nm.notify(NOTIFY_TAG, NOTIFY_ID, builder.build())
+        nm.notify(notificationId, builder.build())
     }
 
     protected open fun getPendingIntent(context: Context): PendingIntent =
@@ -92,15 +99,11 @@ open class DefaultNotifier(
         )
 
     class Factory : Notifier.Factory {
-        override fun create(context: Context, args: PersistableBundle?) =
-            DefaultNotifier(context, args!!.getString("channelId"))
+        override fun create(context: Context, config: DownloaderConfig, args: PersistableBundle?) =
+            DefaultNotifier(context, config.notificationId, args!!.getString("channelId"))
     }
 
     companion object {
-
-        private const val NOTIFY_TAG = "net.dhleong.staypuft"
-        private const val NOTIFY_ID = 78297838
-
         fun withChannelId(channelId: String) = Notifier.Factory.Config(
             DefaultNotifier.Factory::class.java,
             PersistableBundle().apply {

@@ -140,9 +140,10 @@ internal class ExpansionDownloaderEngine(
             val nameMatches = old?.name == new.name
             val sizeMatches = old?.size == new.size
             if (old != null && nameMatches && sizeMatches && !localExists
-                && old.downloaded < old.size)  {
+                    && shouldResumeFile(old))  {
                 // attempt to continue downloading the old file
-                old
+                // (but make sure to use the latest url)
+                old.copy(url = new.url)
             } else if (old == null || !nameMatches || !sizeMatches || !localExists) {
                 // return and save the new file
                 new
@@ -158,6 +159,16 @@ internal class ExpansionDownloaderEngine(
             tracker.markUpdated(service)
         }
     }
+
+    /**
+     * Check if we can and should resume downloading the given file
+     */
+    private fun shouldResumeFile(file: ExpansionFile): Boolean =
+        file.downloaded < file.size
+            && file.etag != null
+            && file.localTmpFile(service).let {
+                it.exists() && it.length() == it.length()
+            }
 
     private fun downloadFile(file: ExpansionFile, notifier: Notifier): Single<ExpansionFile> = Single.fromCallable {
         val dest = prepareDestFile(file)
@@ -346,10 +357,16 @@ internal class ExpansionDownloaderEngine(
         }
     }
 
+    /**
+     * Ensure any active downloads stop. It is safe to call this multiple times
+     */
     fun stop() {
         running.set(false)
     }
 
+    /**
+     * Allow downloads. It is safe to call this multiple times
+     */
     fun start() {
         running.set(true)
     }

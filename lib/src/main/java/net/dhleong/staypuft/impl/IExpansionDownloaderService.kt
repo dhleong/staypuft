@@ -1,6 +1,9 @@
 package net.dhleong.staypuft.impl
 
+import android.annotation.SuppressLint
 import android.content.Context
+import android.provider.Settings
+import com.google.android.vending.licensing.AESObfuscator
 import com.google.android.vending.licensing.APKExpansionPolicy
 import com.google.android.vending.licensing.LicenseChecker
 import io.reactivex.Single
@@ -8,9 +11,9 @@ import net.dhleong.staypuft.DownloaderConfig
 import net.dhleong.staypuft.rx.LicenceCheckerResult
 import net.dhleong.staypuft.rx.checkAccess
 import net.dhleong.staypuft.rx.getAvailableBytes
+import net.dhleong.staypuft.rx.getExpansionFilesDirectory
 import net.dhleong.staypuft.rx.getFilesystemRoot
 import net.dhleong.staypuft.rx.getPackageInfo
-import net.dhleong.staypuft.rx.getExpansionFilesDirectory
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
@@ -34,7 +37,21 @@ interface IExpansionDownloaderService : IHasSaveDirectory {
     /**
      * create the APKExpansionPolicy
      */
-    fun createPolicy(config: DownloaderConfig): APKExpansionPolicy
+    fun createPolicy(config: DownloaderConfig): APKExpansionPolicy {
+        val context = getApplicationContext()
+
+        @SuppressLint("HardwareIds")
+        val deviceId = Settings.Secure.getString(
+            context.contentResolver,
+            Settings.Secure.ANDROID_ID
+        )
+
+        return APKExpansionPolicy(context, AESObfuscator(
+            config.salt,
+            getPackageName(),
+            deviceId
+        ))
+    }
 
     fun openUrl(url: String): HttpURLConnection =
         URL(url).openConnection() as HttpURLConnection
