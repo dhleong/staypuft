@@ -118,20 +118,8 @@ interface Notifier {
         const val STATE_PAUSED_NEED_CELLULAR_PERMISSION = 9
 
         /**
-         * Both STATE_PAUSED_WIFI_DISABLED and STATE_PAUSED_NEED_WIFI imply that
-         * Wi-Fi is unavailable and cellular permission will NOT restart the
-         * service. Wi-Fi disabled means that the Wi-Fi manager is returning that
-         * Wi-Fi is not enabled, while in the other case Wi-Fi is enabled but not
-         * available.
-         *
-         *
-         * The service does not return these values. We recommend that app
-         * developers with very large payloads do not allow these payloads to be
-         * downloaded over cellular connections.
+         * The user is on a roaming cellular network, so we will not attempt to download.
          */
-        const val STATE_PAUSED_WIFI_DISABLED = 10
-        const val STATE_PAUSED_NEED_WIFI = 11
-
         const val STATE_PAUSED_ROAMING = 12
 
         /**

@@ -68,8 +68,6 @@ class Staypuft private constructor(
             Notifier.STATE_PAUSED_BY_REQUEST -> R.string.state_paused_by_request
             Notifier.STATE_PAUSED_WIFI_DISABLED_NEED_CELLULAR_PERMISSION -> R.string.state_paused_wifi_disabled
             Notifier.STATE_PAUSED_NEED_CELLULAR_PERMISSION -> R.string.state_paused_wifi_unavailable
-            Notifier.STATE_PAUSED_WIFI_DISABLED -> R.string.state_paused_wifi_disabled
-            Notifier.STATE_PAUSED_NEED_WIFI -> R.string.state_paused_wifi_unavailable
             Notifier.STATE_PAUSED_ROAMING -> R.string.state_paused_roaming
             Notifier.STATE_PAUSED_NETWORK_SETUP_FAILURE -> R.string.state_paused_network_setup_failure
             Notifier.STATE_PAUSED_SDCARD_UNAVAILABLE -> R.string.state_paused_sdcard_unavailable

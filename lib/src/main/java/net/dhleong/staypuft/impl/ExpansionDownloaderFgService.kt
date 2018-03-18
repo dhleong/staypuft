@@ -27,6 +27,7 @@ class ExpansionDownloaderFgService
     private lateinit var engine: ExpansionDownloaderEngine
     private lateinit var uiProxy: UIProxy
     private lateinit var cm: ConnectivityManager
+    private lateinit var wm: WifiManager
 
     override fun onCreate() {
         super.onCreate()
@@ -37,7 +38,11 @@ class ExpansionDownloaderFgService
             uiProxy
         )
 
+        // NOTE: apparently not using applicationContext to get WifiManager can
+        // cause memory leaks prior to Android N
+        wm = applicationContext.getSystemService(Context.WIFI_SERVICE) as WifiManager
         cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+
     }
 
     override fun onDestroy() {
@@ -127,20 +132,26 @@ class ExpansionDownloaderFgService
         val networkInfo = cm.activeNetworkInfo
             ?: throw PausedException(Notifier.STATE_PAUSED_NETWORK_UNAVAILABLE)
 
+        val isWifiEnabled = wm.isWifiEnabled
+
         if (cm.isActiveNetworkMetered && !config.canUseCellularData) {
             // TODO separate state?
-            throw PausedException(Notifier.STATE_PAUSED_NEED_CELLULAR_PERMISSION)
+            throw PausedException(
+                if (isWifiEnabled) Notifier.STATE_PAUSED_NEED_CELLULAR_PERMISSION
+                else Notifier.STATE_PAUSED_WIFI_DISABLED_NEED_CELLULAR_PERMISSION
+            )
         }
 
         if (networkInfo.isCellular && !config.canUseCellularData) {
-            throw PausedException(Notifier.STATE_PAUSED_NEED_CELLULAR_PERMISSION)
+            throw PausedException(
+                if (isWifiEnabled) Notifier.STATE_PAUSED_NEED_CELLULAR_PERMISSION
+                else Notifier.STATE_PAUSED_WIFI_DISABLED_NEED_CELLULAR_PERMISSION
+            )
         }
 
         if (networkInfo.isRoaming) {
             throw PausedException(Notifier.STATE_PAUSED_ROAMING)
         }
-
-        // TODO Check if wifi is disabled
 
         Log.v("staypuft", "Network state is fine")
     }
