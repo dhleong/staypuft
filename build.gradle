@@ -28,7 +28,7 @@ allprojects {
                 minSdk     : 21,
                 sdk        : 27,
                 versionCode: 1,
-                versionName: "1.0.0",
+                versionName: "1.1.0",
         ]
     }
 }
