@@ -8,7 +8,18 @@ import kotlinx.android.parcel.Parcelize
 import java.util.Arrays
 
 /**
+ * [DownloaderConfig] is how you configure Staypuft for use in your app.
+ * Where possible, sensible default values are provided, but you must
+ * provide your own [salt] and [publicKey] for security. Your [publicKey]
+ * is the one provided by Google's licensing service from the Play Store
+ * console.
+ *
+ * You should NOT pass a `true` value for [canUseCellularData] unless the
+ *  user has explicitly approved it. If you do, you may be wasting a
+ *  significant amount of their monthly data budget!
+ *
  * @author dhleong
+ * @see [Notifier] and [DefaultNotifier]
  */
 @Parcelize
 data class DownloaderConfig(

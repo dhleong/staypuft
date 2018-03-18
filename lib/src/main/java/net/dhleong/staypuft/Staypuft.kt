@@ -5,9 +5,28 @@ import android.support.annotation.StringRes
 import io.reactivex.Observable
 import net.dhleong.staypuft.impl.StaypuftFragment
 
-
-
 /**
+ * Primary entry point to [Staypuft] APK expansion file
+ *  downloads. Sample usage:
+ *
+ *  ```
+ *  val apkx = Staypuft.getInstance(activity)
+ *      .setConfig(
+ *          DownloadConfig(
+ *              salt = // your custom salt array
+ *              publicKey = "YOUR_PUBLIC_KEY base64",
+ *              notifier = DefaultNotifier.withChannelId("expansions")
+ *          )
+ *      )
+ *  apkx.stateEvents.subscribe { event ->
+ *      when (event) {
+ *          is DownloadState.Ready -> {
+ *              println("Got main expansion file at: ${event.main}")
+ *          }
+ *      }
+ *  }
+ *  ```
+ *
  * @author dhleong
  */
 class Staypuft private constructor(
@@ -18,8 +37,9 @@ class Staypuft private constructor(
      * Initialize a download request using the provided [DownloaderConfig],
      *  or update an existing request (to allow cellular data usage, for example)
      */
-    fun setConfig(config: DownloaderConfig) {
+    fun setConfig(config: DownloaderConfig): Staypuft {
         fragment.setConfig(config)
+        return this
     }
 
     /**
@@ -78,6 +98,5 @@ class Staypuft private constructor(
 
             else -> R.string.state_unknown
         }
-
     }
 }

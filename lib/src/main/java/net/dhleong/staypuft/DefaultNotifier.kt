@@ -6,8 +6,12 @@ import android.app.PendingIntent
 import android.content.Context
 import android.os.PersistableBundle
 import android.support.v4.app.NotificationCompat
+import net.dhleong.staypuft.DefaultNotifier.Companion.withChannelId
 
 /**
+ * The default [Notifier] implementation. You should construct a
+ *  [Notifier.Factory.Config] using the [withChannelId] method.
+ *
  * @author dhleong
  */
 @Suppress("MemberVisibilityCanBePrivate")
@@ -104,6 +108,18 @@ open class DefaultNotifier(
     }
 
     companion object {
+
+        /**
+         * Create a [Notifier.Factory.Config] for the [DefaultNotifier]
+         *  that creates its notifications using the provided [channelId]
+         *  on Android O and above. You are responsible for creating
+         *  the channel yourself at an appropriate time!
+         *
+         * NOTE: It is STRONGLY recommended that you create the channel
+         *  associated with the [channelId] using [NotificationManager.IMPORTANCE_LOW]
+         *  so as not to spam the user with notifications and noise while
+         *  the download progresses.
+         */
         fun withChannelId(channelId: String) = Notifier.Factory.Config(
             DefaultNotifier.Factory::class.java,
             PersistableBundle().apply {

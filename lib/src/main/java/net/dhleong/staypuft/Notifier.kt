@@ -15,6 +15,18 @@ class ApkExpansionException(
 ) : Exception(message)
 
 /**
+ * [Notifier] is used to notify the user of the current download
+ *  status via [Notification] so they don't need to be in the app
+ *  while it happens. To provide a custom [Notifier], you will also
+ *  need to implement a [Notifier.Factory], and pass an instance of
+ *  [Notifier.Factory.Config] to your [DownloaderConfig]. This is
+ *  all a bit squirrely due to the use of [android.app.job.JobScheduler]
+ *  if unable to complete theh download right away.
+ *
+ * A default implementation is provided via [DefaultNotifier], and a
+ *  [Notifier.Factory.Config] may be created for it using the
+ *  static factory method [DefaultNotifier.withChannelId].
+ *
  * @author dhleong
  */
 interface Notifier {
@@ -30,6 +42,12 @@ interface Notifier {
      */
     fun build(state: Int): Notification
 
+    /**
+     * A [Notifier.Factory] is used to instantiate a [Factory] from a
+     *  [PersistableBundle]. This is used instead of the more flexible
+     *  [android.os.Bundle] because it may have to be inflated from a
+     *  [android.app.job.JobScheduler], which only supports [PersistableBundle].
+     */
     interface Factory {
 
         /**
@@ -41,14 +59,21 @@ interface Notifier {
             args: PersistableBundle?
         ): Notifier
 
+        /**
+         * A [Notifier.Factory.Config] contains the [PersistableBundle] arguments
+         *  to be used to inflate its associated [Notifier.Factory]. It can be
+         *  serialized into and read from a [PersistableBundle] and is also [Parcelable].
+         */
         class Config(
             val klass: Class<out Factory>,
             val arg: PersistableBundle?
         ) : Parcelable {
 
             /**
-             * Inflate an instance of the [Notifier] this [Config] refers to,
-             *  using an instantiated object the [Factory] class provided
+             * Inflate an instance of the [Notifier] this [Config] refers to.
+             *  You MUST use the provided [DownloaderConfig.notificationId]
+             *  for any [Notification] you show, or else risk an inconsistent
+             *  Notification experience for the user.
              */
             fun inflate(context: Context, config: DownloaderConfig): Notifier =
                 klass.newInstance().create(context, config, arg)

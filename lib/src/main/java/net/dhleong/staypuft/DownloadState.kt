@@ -3,6 +3,9 @@ package net.dhleong.staypuft
 import java.io.File
 
 /**
+ * [DownloadState] represents the current state of
+ *  the APK expansion files.
+ *
  * @author dhleong
  */
 sealed class DownloadState {
@@ -14,7 +17,15 @@ sealed class DownloadState {
         files: List<File>
     ) : DownloadState() {
 
+        /**
+         * Path to the main expansion file
+         */
         val main: File = files[0]
+
+        /**
+         * Path to the patch expansion file, or null
+         *  if there was none.
+         */
         val patch: File? = files.elementAtOrNull(1)
 
     }

@@ -9,15 +9,13 @@ Staypuft is a simple, reactive interface to Google's [APK Expansion Files][1] se
 It looks like this:
 
 ```kotlin
-val apkx = Staypuft.getInstance(activity).apply {
-    setConfig(
-        DownloadConfig(
-            salt = // your custom salt array
-            publicKey = "YOUR_PUBLIC_KEY base64",
-            notifier = DefaultNotifier.withChannelId("expansions")
-        )
+val apkx = Staypuft.getInstance(activity).setConfig(
+    DownloadConfig(
+        salt = // your custom salt array
+        publicKey = "YOUR_PUBLIC_KEY base64",
+        notifier = DefaultNotifier.withChannelId("expansions")
     )
-}
+)
 ```
 
 That's it! If you want to get status updates, just subscribe to them:
