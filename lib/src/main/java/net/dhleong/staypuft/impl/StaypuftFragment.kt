@@ -196,12 +196,10 @@ private class ServiceStateReceiver(
 
             Notifier.STATE_PAUSED_BY_REQUEST,
             Notifier.STATE_PAUSED_NEED_CELLULAR_PERMISSION,
-            Notifier.STATE_PAUSED_NEED_WIFI,
             Notifier.STATE_PAUSED_NETWORK_UNAVAILABLE,
             Notifier.STATE_PAUSED_NETWORK_SETUP_FAILURE,
             Notifier.STATE_PAUSED_ROAMING,
             Notifier.STATE_PAUSED_SDCARD_UNAVAILABLE,
-            Notifier.STATE_PAUSED_WIFI_DISABLED,
             Notifier.STATE_PAUSED_WIFI_DISABLED_NEED_CELLULAR_PERMISSION -> DownloadState.Paused(status)
 
             Notifier.STATE_FAILED,
